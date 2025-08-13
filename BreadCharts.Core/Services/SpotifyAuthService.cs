@@ -1,8 +1,11 @@
+using BreadCharts.Core.Infrastructure;
+using BreadCharts.Core.Models;
+using Microsoft.Extensions.Configuration;
 using SpotifyAPI.Web;
 
 namespace BreadCharts.Core.Services;
 
-public class SpotifyAuthService
+public class SpotifyAuthService : IAuthenticationService
 {
     private readonly string _redirectUri;
     private readonly string _clientId;
@@ -12,13 +15,17 @@ public class SpotifyAuthService
     internal string refreshToken;
     internal SpotifyClient spotify;
     
+    private int pageSize = 20;
+    
     public bool Authed => spotify != null && !string.IsNullOrEmpty(accessToken) && !string.IsNullOrEmpty(refreshToken);
 
-    public SpotifyAuthService(string redirectUri, string clientId, string clientSecret)
+    public SpotifyAuthService(IConfiguration configRoot)
     {
-        _redirectUri = redirectUri;
-        _clientId = clientId;
-        _clientSecret = clientSecret;
+        var authServiceConfig = configRoot.GetSection("AuthServiceConfig").Get<AuthServiceConfig>();
+        
+        _redirectUri = authServiceConfig.RedirectUri;
+        _clientId = authServiceConfig.ClientId;
+        _clientSecret = authServiceConfig.ClientSecret;
     }
     
     public Uri LoginChallenge()
@@ -41,32 +48,39 @@ public class SpotifyAuthService
         return uri;
     }
     
-    public async Task<bool> GetCallback(string code)
+    public async Task<bool> ChallengeCallback(string userId, string code)
     {
         var response = await new OAuthClient().RequestToken(
             new AuthorizationCodeTokenRequest(_clientId, _clientSecret, code, new Uri(_redirectUri))
         );
         
         
-        spotify = GetSpotifyClient(response);
+        spotify = ConfigureSpotifyClientFromCode(response);
         
         
         return true;
     }
 
-    public async Task<PrivateUser> GetUserProfile()
+    public async Task<UserProfile> GetUserProfile()
     {
+        spotify ??= GetSpotifyClient();
         if (!Authed) return null;
 
-        var tracksResponse = await spotify.UserProfile.Current();
+        var privateUser = await spotify.UserProfile.Current();
 
-        return tracksResponse;
+        var userProfile = new UserProfile
+        {
+            Id = privateUser.Id,
+            Name = privateUser.DisplayName
+        };
+        return userProfile;
     }
     
     public async Task<List<FullTrack>> GetBasicTracks()
     {
         var returnList = new List<FullTrack>();
-        if (!Authed) return returnList;
+        spotify ??= GetSpotifyClient();
+        if (spotify == null) return returnList;
 
         var tracksResponse = await spotify.UserProfile.GetTopTracks(new UsersTopItemsRequest(TimeRange.MediumTerm));
 
@@ -75,7 +89,98 @@ public class SpotifyAuthService
         return tracksResponse?.Items?.ToList();
     }
 
-    private SpotifyClient GetSpotifyClient(AuthorizationCodeTokenResponse response)
+    
+    public async Task<List<ChartOption>> Search(string searchTerm, int page = -1)
+    {
+        spotify ??= GetSpotifyClient();
+        if (spotify == null) return null;
+        
+        var returnList = new List<ChartOption>();
+        if (string.IsNullOrEmpty(searchTerm)) return returnList;
+        
+        var offset = page > 0 ? page * pageSize : 0;
+        var searchRequest = new SearchRequest(SearchRequest.Types.All, searchTerm)
+        {
+            Offset = offset
+        };
+        
+        var searchResponse = await spotify.Search.Item(searchRequest);
+
+        if (searchResponse == null) return returnList;
+
+        if (searchResponse.Tracks?.Items != null)
+        {
+            foreach (var track in searchResponse.Tracks.Items)
+            {
+                var trackName = $"{string.Join(", ", track.Artists.Select(art => art.Name))} - {track.Name}";
+                var chartOption = new ChartOption
+                {
+                    Id = track.Id,
+                    Name = trackName,
+                    Type = ChartOptionType.Track
+                };
+                returnList.Add(chartOption);
+            }
+        }
+
+        if (searchResponse.Albums.Items != null)
+        {
+            foreach (var album in searchResponse.Albums.Items)
+            {
+                var chartOption = new ChartOption
+                {
+                    Id = album.Id,
+                    Name = album.Name,
+                    Type = ChartOptionType.Album
+                };
+                returnList.Add(chartOption);
+            }
+        }
+
+        if (searchResponse.Artists.Items != null)
+        {
+            foreach (var artist in searchResponse.Artists.Items)
+            {
+                var chartOption = new ChartOption
+                {
+                    Id = artist.Id,
+                    Name = artist.Name,
+                    Type = ChartOptionType.Artist
+                };
+                returnList.Add(chartOption);
+            }
+        }
+
+        if (searchResponse.Playlists.Items != null)
+        {
+            foreach (var playlist in searchResponse.Playlists.Items)
+            {
+                if (playlist == null) continue;
+                var chartOption = new ChartOption
+                {
+                    Id = playlist.Id,
+                    Name = playlist.Name,
+                    Type = ChartOptionType.Playlist
+                };
+                returnList.Add(chartOption);
+            }
+        }
+
+        return returnList;
+    }
+
+    private SpotifyClient GetSpotifyClient()
+    {
+        if (spotify == null && !string.IsNullOrEmpty(accessToken) && !string.IsNullOrEmpty(refreshToken))
+        {
+            
+            spotify = ConfigureSpotifyClientFromToken();
+        }
+        
+        return spotify;
+    }
+    
+    private SpotifyClient ConfigureSpotifyClientFromCode(AuthorizationCodeTokenResponse response)
     {
         var config = SpotifyClientConfig
             .CreateDefault()
@@ -83,6 +188,16 @@ public class SpotifyAuthService
           
         accessToken = response.AccessToken;
         refreshToken = response.RefreshToken;
+        
+        var spotify = new SpotifyClient(config);
+
+        return spotify;
+    }
+    
+    private SpotifyClient ConfigureSpotifyClientFromToken()
+    {
+        var config = SpotifyClientConfig
+            .CreateDefault().WithToken(accessToken);
         
         var spotify = new SpotifyClient(config);
 

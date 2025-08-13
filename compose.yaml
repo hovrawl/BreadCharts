@@ -1,0 +1,7 @@
+﻿services:
+  breadcharts.web:
+    image: breadcharts.web
+    build:
+      context: .
+      dockerfile: BreadCharts.Web/Dockerfile
+

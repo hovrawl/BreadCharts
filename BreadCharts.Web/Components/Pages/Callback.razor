@@ -1,0 +1,69 @@
+@page "/callback"
+@using BreadCharts.Core.Services
+@inject NavigationManager NavigationManager
+@inject SpotifyAuthService SpotifyAuthService
+
+<p>Linking your Spotify account...</p>
+
+@code {
+    protected override async Task OnInitializedAsync()
+    {
+        // var uri = new Uri(NavigationManager.Uri);
+        // var queryParams = System.Web.HttpUtility.ParseQueryString(uri.Query);
+        // var code = queryParams["code"];
+        // var state = queryParams["state"];
+        //
+        // if (!string.IsNullOrEmpty(code))
+        // {
+        //     try
+        //     {
+        //         var token = await SpotifyAuthService.GetCallback(code);
+        //         // Store token, update user state, etc.
+        //
+        //         // Redirect to main page or dashboard
+        //         NavigationManager.NavigateTo("/");
+        //     }
+        //     catch (Exception ex)
+        //     {
+        //         Console.Error.WriteLine($"Spotify token exchange failed: {ex.Message}");
+        //         NavigationManager.NavigateTo("/error"); // Optional error page
+        //     }
+        // }
+        // else
+        // {
+        //     NavigationManager.NavigateTo("/", forceLoad: true);
+        // }
+    }
+    
+    bool hasRedirected = false;
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender && !hasRedirected)
+        {
+            var uri = new Uri(NavigationManager.Uri);
+            var queryParams = System.Web.HttpUtility.ParseQueryString(uri.Query);
+            var code = queryParams["code"];
+
+            if (!string.IsNullOrEmpty(code))
+            {
+                hasRedirected = true;
+
+                try
+                {
+                    var authed = await SpotifyAuthService.GetCallback(code);
+                    if (authed) NavigationManager.NavigateTo("/", replace: true);
+                    else
+                    {
+                        // error authing
+                    }
+                }
+                catch (Exception ex)
+                {
+                    Console.Error.WriteLine($"Token exchange failed: {ex.Message}");
+                    NavigationManager.NavigateTo("/error", replace: true);
+                }
+            }
+        }
+    }
+}

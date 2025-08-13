@@ -1,0 +1,73 @@
+﻿@page "/"
+@using BreadCharts.Core.Services
+@using SpotifyAPI.Web
+@inject NavigationManager NavigationManager;
+@inject SpotifyAuthService spotifyService;
+
+<PageTitle>Home</PageTitle>
+
+<FluentStack >
+    @if (spotifyService.Authed)
+    {
+        <FluentStack>
+            <p>Name: @username</p>
+        </FluentStack>
+        <FluentStack>
+            <p>Choose a song</p>
+            <FluentCombobox 
+                Placeholder="Make a selection..." 
+                Label="Best song" 
+                Autofocus="true" 
+                Items="@Options" 
+                @bind-Value="@selectedOption" 
+                Height="200px" 
+                Immediate ImmediateDelay="100"
+                OptionText="@(i => $"{string.Join(", ", i.Artists.Select(art => art.Name))} - {i.Name}")" />
+        </FluentStack>
+        
+
+    }
+    else
+    {
+        <FluentButton IconStart="@(new Icons.Regular.Size16.ArrowClockwise())"
+                      Loading="@loading"
+                      OnClick="@StartLoadingAsync">
+            Auth Spotify
+        </FluentButton>
+    }
+    
+</FluentStack>
+
+@code {
+
+    bool authed;
+    bool loading = false;
+
+    List<FullTrack> Options = new();
+    string selectedOption;
+
+    string username;
+    
+    protected override async Task OnInitializedAsync()
+    {
+        authed = spotifyService.Authed;
+        if (authed)
+        {
+            var userProfile = await spotifyService.GetUserProfile();
+            if (userProfile != null)
+            {
+                username = userProfile.DisplayName;
+            }
+            var topTracks = await spotifyService.GetBasicTracks();
+            if (topTracks?.Count > 0) Options.AddRange(topTracks);
+        }
+    }
+
+    async Task StartLoadingAsync()
+    {
+        var challengeUri = spotifyService.LoginChallenge();
+        NavigationManager.NavigateTo(challengeUri.ToString());
+    }
+    
+    
+}

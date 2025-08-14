@@ -10,7 +10,7 @@
                   @oninput="@(e => SearchValue = e.Value?.ToString())"
                   Placeholder="Search for songs" />
     <br />
-    <FluentStack Orientation="Orientation.Horizontal" Class="overflow-y">
+    <FluentStack Orientation="Orientation.Horizontal" Class="chart-picker overflow-y">
         <FluentListbox
             Class="overflow-y"
             aria-label="search results"
@@ -18,7 +18,6 @@
             TOption="ChartOption"
             @bind-SelectedOption="SelectedChartOption"
             OptionValue="@(option => option.Id)"
-            Height="300px"
         >
             <OptionTemplate>
                 <FluentStack Orientation="Orientation.Horizontal">
@@ -115,8 +114,11 @@
             string searchTerm = SearchValue.ToLower();
 
             //You can also call an API here if the list is not local
-            searchResults = await SpotifyAuthService.Search(searchTerm);
-            
+            var results = await SpotifyAuthService.Search(searchTerm);
+            searchResults = results
+                .OrderBy(o => SortKey(o.Name, searchTerm))
+                .ThenBy(o => o.Name, StringComparer.CurrentCultureIgnoreCase)
+                .ToList();
 
             if (!searchResults.Any())
             {
@@ -140,6 +142,25 @@
         searchResults = defaultResults();
         SearchValue = string.Empty;
         StateHasChanged();
+    }
+
+    private static (int priority, int position, int lengthDelta) SortKey(string? name, string term)
+    {
+        if (string.IsNullOrWhiteSpace(name) || string.IsNullOrWhiteSpace(term))
+            return (int.MaxValue, int.MaxValue, int.MaxValue);
+
+        // 0 = exact, 1 = startswith, 2 = contains, 3 = no match
+        if (string.Equals(name, term, StringComparison.OrdinalIgnoreCase))
+            return (0, 0, 0);
+
+        if (name.StartsWith(term, StringComparison.OrdinalIgnoreCase))
+            return (1, 0, Math.Abs(name.Length - term.Length));
+
+        var idx = name.IndexOf(term, StringComparison.OrdinalIgnoreCase);
+        if (idx >= 0)
+            return (2, idx, Math.Abs(name.Length - term.Length));
+
+        return (3, int.MaxValue, Math.Abs(name.Length - term.Length));
     }
 
     private RenderFragment GetIconForChartOptionType(ChartOptionType chartOptionType) => builder =>
@@ -168,3 +189,9 @@
 
     };
 }
+
+<style>
+    .chart-picker > div{
+        max-height: 100%;
+    }
+</style>

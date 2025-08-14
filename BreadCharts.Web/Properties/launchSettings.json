@@ -5,9 +5,12 @@
         "commandName": "Project",
         "dotnetRunMessages": true,
         "launchBrowser": true,
-        "applicationUrl": "http://localhost:5105",
+        "applicationUrl": "http://localhost:5105;http://192.168.20.6:7156:5105",
         "environmentVariables": {
-          "ASPNETCORE_ENVIRONMENT": "Development"
+          "ASPNETCORE_ENVIRONMENT": "Development",
+          "ASPNETCORE_DETAILEDERRORS": "true",
+          "Logging__LogLevel__Default": "Debug",
+          "CORS_ALLOWED_ORIGINS": "http://localhost:3000"
         }
       },
       "https": {
@@ -16,7 +19,10 @@
         "launchBrowser": true,
         "applicationUrl": "https://192.168.20.6:7156;https://localhost:7156;http://192.168.20.6:7156:5105;http://localhost:5105",
         "environmentVariables": {
-          "ASPNETCORE_ENVIRONMENT": "Development"
+          "ASPNETCORE_ENVIRONMENT": "Development",
+          "ASPNETCORE_DETAILEDERRORS": "true",
+          "Logging__LogLevel__Default": "Debug",
+          "CORS_ALLOWED_ORIGINS": "http://localhost:3000"
         }
       }
     }

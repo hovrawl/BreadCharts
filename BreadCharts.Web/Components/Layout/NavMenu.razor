@@ -1,44 +1,81 @@
 ﻿@implements IDisposable
+@using Microsoft.JSInterop
 
 @inject NavigationManager NavigationManager
+@inject IJSRuntime JS
 
 <div class="navmenu">
     <input type="checkbox" title="Menu expand/collapse toggle" id="navmenu-toggle" class="navmenu-icon"/>
     <label for="navmenu-toggle" class="navmenu-icon">
         <FluentIcon Value="@(new Icons.Regular.Size20.Navigation())" Color="Color.Fill"/>
     </label>
-    <nav class="sitenav" aria-labelledby="main-menu">
-        <FluentNavMenu Id="main-menu" Collapsible="true" Width="250" Title="Navigation menu" @bind-Expanded="expanded" CustomToggle="true">
-            <FluentNavLink Href="/" Match="NavLinkMatch.All" Icon="@(new Icons.Regular.Size20.Home())" IconColor="Color.Accent">Home</FluentNavLink>
-            <FluentNavLink Href="counter" Icon="@(new Icons.Regular.Size20.NumberSymbolSquare())" IconColor="Color.Accent">Counter</FluentNavLink>
-            <FluentNavLink Href="weather" Icon="@(new Icons.Regular.Size20.WeatherPartlyCloudyDay())" IconColor="Color.Accent">Weather</FluentNavLink>
-            <FluentNavLink Href="auth" Icon="@(new Icons.Regular.Size20.LockClosedKey())" IconColor="Color.Accent">Auth Required</FluentNavLink>
-            <AuthorizeView>
-                <Authorized>
-                    <FluentNavLink Href="Account/Manage">@context.User.Identity?.Name</FluentNavLink>
-                    <form action="Account/Logout" method="post">
-                        <AntiforgeryToken/>
-                        <input type="hidden" name="ReturnUrl" value="@currentUrl"/>
-                        <FluentButton Type="ButtonType.Submit" Style="width: 100%;">Logout</FluentButton>
-                    </form>
-                </Authorized>
-                <NotAuthorized>
-                    <FluentNavLink Href="Account/Register">Register</FluentNavLink>
-                    <FluentNavLink Href="Account/Login">Login</FluentNavLink>
-                </NotAuthorized>
-            </AuthorizeView>
-        </FluentNavMenu>
-    </nav>
+    <FluentAppBar
+        Id="main-menu"
+        Orientation="Orientation.Vertical">
+        <FluentAppBarItem Href="/"
+                          Match="NavLinkMatch.All"
+                          IconRest="@(new Icons.Regular.Size20.Home())"
+                          IconActive="@(new Icons.Filled.Size20.Home())"
+                          Text="Home" />
+        <AuthorizeView>
+            <Authorized>
+                <FluentAppBarItem 
+                    Href="Account/Manage" 
+                    Text="@context.User.Identity?.Name"
+                    IconRest="@(new Icons.Regular.Size20.Person())"
+                    IconActive="@(new Icons.Filled.Size20.Person())"/>
+                <form action="Account/Logout" method="post">
+                    <AntiforgeryToken/>
+                    <input type="hidden" name="ReturnUrl" value="@currentUrl"/>
+                    <FluentButton Type="ButtonType.Submit" Style="width: 100%;">Logout</FluentButton>
+                </form>
+            </Authorized>
+            <NotAuthorized>
+                <FluentAppBarItem 
+                    Href="Account/Register" 
+                    Text="Register"
+                    IconRest="@(new Icons.Regular.Size20.PersonAdd())"
+                    IconActive="@(new Icons.Filled.Size20.PersonAdd())" />
+                <FluentAppBarItem 
+                    Href="Account/Login" 
+                    Text="Login"
+                    IconRest="@(new Icons.Regular.Size20.PersonArrowRight())"
+                    IconActive="@(new Icons.Filled.Size20.PersonArrowRight())" />
+            </NotAuthorized>
+        </AuthorizeView>
+    </FluentAppBar>
 </div>
 
 @code {
+    private const string BreakpointQuery = "(max-width: 600px)";
+    private Orientation _orientation = Orientation.Vertical;
+
     private bool expanded = true;
     private string? currentUrl;
+    private DotNetObjectReference<NavMenu>? _objRef;
 
     protected override void OnInitialized()
     {
         currentUrl = NavigationManager.ToBaseRelativePath(NavigationManager.Uri);
         NavigationManager.LocationChanged += OnLocationChanged;
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            _objRef = DotNetObjectReference.Create(this);
+            await JS.InvokeVoidAsync("responsive.registerMq", _objRef, BreakpointQuery);
+        }
+    }
+
+    [JSInvokable]
+    public Task OnMqChange(bool isNarrow)
+    {
+        // Make the app bar Horizontal on small screens (<= 600px), Vertical otherwise
+        _orientation = isNarrow ? Orientation.Horizontal : Orientation.Vertical;
+        StateHasChanged();
+        return Task.CompletedTask;
     }
 
     private void OnLocationChanged(object? sender, LocationChangedEventArgs e)
@@ -50,6 +87,14 @@
     public void Dispose()
     {
         NavigationManager.LocationChanged -= OnLocationChanged;
+        
+        
+        if (_objRef is not null)
+        {
+            _ = JS.InvokeVoidAsync("responsive.unregisterMq", _objRef);
+            _objRef.Dispose();
+        }
+
     }
 
 }

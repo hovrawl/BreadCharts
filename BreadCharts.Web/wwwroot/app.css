@@ -8,10 +8,20 @@ body {
     margin: 0;
 }
 
-.navmenu-icon {
+/*.navmenu-icon {*/
+/*    display: none;*/
+/*}*/
+#navmenu-toggle {
+    appearance: none;
+}
+
+#navmenu-toggle ~ nav {
     display: none;
 }
 
+#navmenu-toggle:checked ~ nav {
+    display: block;
+}
 .main {
     min-height: calc(100dvh - 50px);
     color: var(--neutral-foreground-rest);
@@ -134,15 +144,23 @@ footer {
 code {
     color: #c02d76;
 }
+#main-menu {
+    background: var(--neutral-layer-1);
+}
+#main-menu[data-collapsed] {
+    width: 0 !important;
+    translate: 0;
+    visibility: collapse;
+}
 
 @media (max-width: 600px) {
-    .header-gutters {
-        margin: 0.5rem 3rem 0.5rem 1.5rem !important;
-    }
-
-    [dir="rtl"] .header-gutters {
-        margin: 0.5rem 1.5rem 0.5rem 3rem !important;
-    }
+    /*.header-gutters {*/
+    /*    margin: 0.5rem 3rem 0.5rem 1.5rem !important;*/
+    /*}*/
+    
+    /*[dir="rtl"] .header-gutters {*/
+    /*    margin: 0.5rem 1.5rem 0.5rem 3rem !important;*/
+    /*}*/
 
     .main {
         flex-direction: column !important;
@@ -154,45 +172,37 @@ code {
         height: 100%;
     }
 
-    #main-menu {
-        width: 100% !important;
-    }
-
-        #main-menu > div:first-child:is(.expander) {
-            display: none;
-        }
+        /*#main-menu > div:first-child:is(.expander) {*/
+        /*    display: none;*/
+        /*}*/
 
     .navmenu {
         width: 100%;
     }
 
-    #navmenu-toggle {
-        appearance: none;
-    }
-
-        #navmenu-toggle ~ nav {
-            display: none;
-        }
-
-        #navmenu-toggle:checked ~ nav {
-            display: block;
-        }
-
     .navmenu-icon {
         cursor: pointer;
         z-index: 10;
         display: block;
-        position: absolute;
-        top: 15px;
-        left: unset;
-        right: 20px;
+        /*position: absolute;*/
+        /*top: 15px;*/
+        /*left: unset;*/
+        /*right: 20px;*/
         width: 20px;
         height: 20px;
         border: none;
     }
 
-    [dir="rtl"] .navmenu-icon {
-        left: 20px;
-        right: unset;
+    /*[dir="rtl"] .navmenu-icon {*/
+    /*    left: 20px;*/
+    /*    right: unset;*/
+    /*}*/
+    #main-menu {
+        position: absolute;
+        z-index: 1000;
     }
+    /*#main-menu:not([data-collapsed]) {*/
+    /*    width:100%;*/
+    /*}*/
+    
 }

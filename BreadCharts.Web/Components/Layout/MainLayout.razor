@@ -1,42 +1,89 @@
-﻿@inherits LayoutComponentBase
-@inject NavigationManager NavigationManager;
+﻿@implements IDisposable
+@inherits LayoutComponentBase
+
+@inject NavigationManager NavigationManager
+@inject IJSRuntime JS
 
 <FluentLayout>
     <FluentHeader>
-        Chart Stopper
-        <FluentSpacer />
-        <AuthorizeView>
-            <Authorized>
-                <FluentProfileMenu 
-                    Status="@PresenceStatus.Available"
-                    HeaderLabel="Microsoft"
-                    Initials="@(context.User.Identity?.Name?[..1])"
-                    FullName="@context.User.Identity?.Name"
-                    EMail="@context.User.Identity?.Name"
-                    PopoverStyle="min-width: 330px;" 
-                    OnFooterLinkClick="@(() => NavigationManager.NavigateTo("Account/Manage"))"
-                    OnHeaderButtonClick="@(() => NavigationManager.NavigateTo("Account/Logout"))"
-                    />
-            </Authorized>
-            <NotAuthorized>
-                <FluentNavLink Href="Account/Register">Register</FluentNavLink>
-                <FluentNavLink Href="Account/Login">Login</FluentNavLink>
-            </NotAuthorized>
-        </AuthorizeView>
+        <FluentStack Orientation="Orientation.Horizontal">
+            <FluentIcon 
+                class="navmenu-icon"
+                Title="Toggle Menu"
+                Value="@(new Icons.Regular.Size20.Navigation())"
+                Color="Color.Fill" 
+                OnClick="@(() => ToggleMenu())"
+            />
+            <span>
+                Chart Stopper
+            </span>
+            <FluentSpacer/>
+            <AuthorizeView>
+                <Authorized>
+                    <FluentProfileMenu
+                        Status="@PresenceStatus.Available"
+                        HeaderLabel="Microsoft"
+                        Initials="@(context.User.Identity?.Name?[..1])"
+                        FullName="@context.User.Identity?.Name"
+                        EMail="@context.User.Identity?.Name"
+                        PopoverStyle="min-width: 330px;"
+                        OnFooterLinkClick="@(() => NavigationManager.NavigateTo("Account/Manage"))"
+                        OnHeaderButtonClick="@(() => NavigationManager.NavigateTo("Account/Logout"))"/>
+                </Authorized>
+                <NotAuthorized>
+                    <FluentNavLink Href="Account/Register">Register</FluentNavLink>
+                    <FluentNavLink Href="Account/Login">Login</FluentNavLink>
+                </NotAuthorized>
+            </AuthorizeView>
+        </FluentStack>
     </FluentHeader>
     <FluentStack Class="main" Orientation="Orientation.Horizontal" Width="100%">
-        <NavMenu/>
+        <div class="navmenu">
+            <FluentAppBar
+                @ref="_appBar"
+                Id="main-menu"
+                Orientation="Orientation.Vertical"
+                data-collapsed="@_collapsed">
+                <FluentAppBarItem Href="/"
+                                  Match="NavLinkMatch.All"
+                                  IconRest="@(new Icons.Regular.Size20.Home())"
+                                  IconActive="@(new Icons.Filled.Size20.Home())"
+                                  Text="Home"/>
+                <AuthorizeView>
+                    <Authorized>
+                        <FluentAppBarItem
+                            Href="Account/Manage"
+                            Text="@context.User.Identity?.Name"
+                            IconRest="@(new Icons.Regular.Size20.Person())"
+                            IconActive="@(new Icons.Filled.Size20.Person())"/>
+                        <form action="Account/Logout" method="post">
+                            <AntiforgeryToken/>
+                            <input type="hidden" name="ReturnUrl" value="@currentUrl"/>
+                            <FluentButton Type="ButtonType.Submit" Style="width: 100%;">Logout</FluentButton>
+                        </form>
+                    </Authorized>
+                    <NotAuthorized>
+                        <FluentAppBarItem
+                            Href="Account/Register"
+                            Text="Register"
+                            IconRest="@(new Icons.Regular.Size20.PersonAdd())"
+                            IconActive="@(new Icons.Filled.Size20.PersonAdd())"/>
+                        <FluentAppBarItem
+                            Href="Account/Login"
+                            Text="Login"
+                            IconRest="@(new Icons.Regular.Size20.PersonArrowRight())"
+                            IconActive="@(new Icons.Filled.Size20.PersonArrowRight())"/>
+                    </NotAuthorized>
+                </AuthorizeView>
+            </FluentAppBar>
+        </div>
+       
         <FluentBodyContent Class="body-content">
             <div class="content">
                 @Body
             </div>
         </FluentBodyContent>
     </FluentStack>
-    @* <FluentFooter> *@
-    @*     <a href="https://www.fluentui-blazor.net" target="_blank">Documentation and demos</a> *@
-    @*     <FluentSpacer/> *@
-    @*     <a href="https://learn.microsoft.com/en-us/aspnet/core/blazor" target="_blank">About Blazor</a> *@
-    @* </FluentFooter> *@
 </FluentLayout>
 
 <div id="blazor-error-ui" data-nosnippet>
@@ -44,3 +91,70 @@
     <a href="." class="reload">Reload</a>
     <span class="dismiss">🗙</span>
 </div>
+
+
+@code {
+    private const string BreakpointQuery = "(max-width: 600px)";
+    private Orientation _orientation = Orientation.Vertical;
+
+    private bool _narrow = false;
+    private bool expanded = true;
+    private string? currentUrl;
+    private DotNetObjectReference<MainLayout>? _objRef;
+    private FluentAppBar _appBar;
+    private bool _collapsed;
+
+    protected override void OnInitialized()
+    {
+        currentUrl = NavigationManager.ToBaseRelativePath(NavigationManager.Uri);
+        NavigationManager.LocationChanged += OnLocationChanged;
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            _objRef = DotNetObjectReference.Create(this);
+            await JS.InvokeVoidAsync("responsive.registerMq", _objRef, BreakpointQuery);
+        }
+    }
+
+    public void ToggleMenu()
+    {
+        _collapsed = !_collapsed;
+    }
+
+    [JSInvokable]
+    public Task OnMqChange(bool isNarrow)
+    {
+        // Viewport has adjusted between narrow and not
+        // lets adjust the menus
+        _narrow = isNarrow;
+        _collapsed = _narrow;
+        _orientation = _narrow ? Orientation.Horizontal : Orientation.Vertical;
+        StateHasChanged();
+        return Task.CompletedTask;
+    }
+
+    private void OnLocationChanged(object? sender, LocationChangedEventArgs e)
+    {
+        // On navigate (App Bar button pressed), while narrow collapse menu
+        if (_narrow) _collapsed = true;
+        currentUrl = NavigationManager.ToBaseRelativePath(e.Location);
+        StateHasChanged();
+    }
+
+    public void Dispose()
+    {
+        NavigationManager.LocationChanged -= OnLocationChanged;
+        
+        
+        if (_objRef is not null)
+        {
+            _ = JS.InvokeVoidAsync("responsive.unregisterMq", _objRef);
+            _objRef.Dispose();
+        }
+
+    }
+
+}

@@ -8,6 +8,6 @@ public class ApplicationUser : IdentityUser
     public string RefreshToken { get; set; } = "";
     
     public string AccessToken { get; set; } = "";
-    
-    public string ThirdPartyId { get; set; }
+
+    public string ThirdPartyId { get; set; } = "";
 }

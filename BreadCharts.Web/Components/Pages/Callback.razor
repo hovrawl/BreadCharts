@@ -3,55 +3,67 @@
 @using BreadCharts.Web.Components.Account
 @using BreadCharts.Web.Data
 @using Microsoft.AspNetCore.Authorization
-@inject NavigationManager NavigationManager
-@inject SpotifyAuthService SpotifyAuthService
-@inject IdentityUserAccessor UserAccessor
+@using Microsoft.AspNetCore.Identity
+@using Microsoft.AspNetCore.WebUtilities
 
 @attribute [Authorize]
+@inject NavigationManager NavigationManager
+@inject SpotifyAuthService SpotifyAuthService
+@inject UserManager<ApplicationUser> UserManager
+
+@rendermode InteractiveServer
 
 <p>Linking your Spotify account...</p>
 
 @code {
-    [CascadingParameter] private HttpContext HttpContext { get; set; } = default!;
-    
-    private ApplicationUser user = default!;
-    
-    protected override async Task OnInitializedAsync()
-    {
-        user = await UserAccessor.GetRequiredUserAsync(HttpContext);
+    [CascadingParameter] private Task<AuthenticationState> AuthenticationStateTask { get; set; } = default!;
 
-    }
+    private ApplicationUser? _user;
+    private string? _redirectTo;
+    private bool _navigated;
+
+   
     
-    bool hasRedirected = false;
-
-
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
-        if (user != null && firstRender && !hasRedirected)
+        var authState = await AuthenticationStateTask;
+        var principal = authState.User;
+
+        if (principal?.Identity?.IsAuthenticated == true && !SpotifyAuthService.Authed)
         {
-            var uri = new Uri(NavigationManager.Uri);
-            var queryParams = System.Web.HttpUtility.ParseQueryString(uri.Query);
-            var code = queryParams["code"];
+            _user = await UserManager.GetUserAsync(principal);
 
-            if (!string.IsNullOrEmpty(code))
+            var uri = NavigationManager.ToAbsoluteUri(NavigationManager.Uri);
+            var query = QueryHelpers.ParseQuery(uri.Query);
+
+            if (query.TryGetValue("code", out var code) && !string.IsNullOrEmpty(code))
             {
-                hasRedirected = true;
-
                 try
                 {
-                    var authed = await SpotifyAuthService.ChallengeCallback(user.Id, code);
-                    if (authed) NavigationManager.NavigateTo("/", replace: true);
-                    else
-                    {
-                        // error authing
-                    }
+                    var authed = await SpotifyAuthService.ChallengeCallback(_user!.Id, code!);
+                    _redirectTo = authed ? "/" : "/error";
                 }
                 catch (Exception ex)
                 {
                     Console.Error.WriteLine($"Token exchange failed: {ex.Message}");
-                    NavigationManager.NavigateTo("/error", replace: true);
+                    _redirectTo = "/error";
                 }
             }
         }
+        else
+        {
+            // Redirect to home
+            _redirectTo = "/";
+            // Optional: choose a sensible fallback
+            // _redirectTo = "Identity/Account/Login";
+            // await InvokeAsync(StateHasChanged);
+        }
+        
+        if (!_navigated && _redirectTo is not null)
+        {
+            _navigated = true;
+            NavigationManager.NavigateTo(_redirectTo, replace: true);
+        }
     }
+
 }

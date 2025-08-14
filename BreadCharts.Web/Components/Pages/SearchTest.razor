@@ -1,5 +1,7 @@
 @page "/SearchTest"
 @using System.Timers;
+@using BreadCharts.Core.Services
+@inject SpotifyAuthService SpotifyAuthService
 
 <FluentSearch @ref=searchTest
               @bind-Value="SearchValue"
@@ -41,6 +43,13 @@
 
     private static string defaultResultsText = "No results";
 
+    protected override async Task OnInitializedAsync()
+    {
+        var topSongs = await SpotifyAuthService.GetBasicTracks();
+        searchData.AddRange(topSongs.Select(i =>$"{string.Join(", ", i.Artists.Select(art => art.Name))} - {i.Name}"));
+    }
+
+
     private static List<string> defaultResults()
     {
         return new() { defaultResultsText };
@@ -63,14 +72,18 @@
         }
     }
 
-    private void OnSearch()
+    private async Task OnSearch()
     {
         if (!string.IsNullOrWhiteSpace(SearchValue))
         {
             string searchTerm = SearchValue.ToLower();
 
             //You can also call an API here if the list is not local
+            var topSongs = await SpotifyAuthService.Search(searchTerm);
+            searchData.AddRange(topSongs.Select(i => i.Name));
+            
             List<string> temp = searchData.Where(str => str.ToLower().Contains(searchTerm)).Select(str => str).ToList();
+
             if (temp.Count() > 0)
             {
                 searchResults = temp;
@@ -100,57 +113,5 @@
     }
 
     //This component is made for a lot of data. You can copy and paste a list with 6000 entries here https://sharetext.me/vfknowohwl"
-    private List<string> searchData = new()
-    {
-        "Alabama",
-        "Alaska",
-        "Arizona",
-        "Arkansas",
-        "California",
-        "Colorado",
-        "Connecticut",
-        "Delaware",
-        "Florida",
-        "Georgia",
-        "Hawaii",
-        "Idaho",
-        "Illinois",
-        "Indiana",
-        "Iowa",
-        "Kansas",
-        "Kentucky",
-        "Louisiana",
-        "Maine",
-        "Maryland",
-        "Massachussets",
-        "Michigain",
-        "Minnesota",
-        "Mississippi",
-        "Missouri",
-        "Montana",
-        "Nebraska",
-        "Nevada",
-        "New Hampshire",
-        "New Jersey",
-        "New Mexico",
-        "New York",
-        "North Carolina",
-        "North Dakota",
-        "Ohio",
-        "Oklahoma",
-        "Oregon",
-        "Pennsylvania",
-        "Rhode Island",
-        "South Carolina",
-        "South Dakota",
-        "Texas",
-        "Tennessee",
-        "Utah",
-        "Vermont",
-        "Virginia",
-        "Washington",
-        "Wisconsin",
-        "West Virginia",
-        "Wyoming"
-    };
+    private List<string> searchData = new();
 }

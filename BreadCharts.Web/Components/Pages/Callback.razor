@@ -14,6 +14,7 @@
 @rendermode InteractiveServer
 
 <p>Linking your Spotify account...</p>
+<FluentProgress></FluentProgress>
 
 @code {
     [CascadingParameter] private Task<AuthenticationState> AuthenticationStateTask { get; set; } = default!;

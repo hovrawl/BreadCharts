@@ -13,7 +13,7 @@ public class SpotifyAuthService : IAuthenticationService
     
     internal string accessToken;
     internal string refreshToken;
-    internal SpotifyClient spotify;
+    internal SpotifyClient? spotify;
     
     private int pageSize = 20;
     
@@ -88,7 +88,6 @@ public class SpotifyAuthService : IAuthenticationService
         
         return tracksResponse?.Items?.ToList();
     }
-
     
     public async Task<List<ChartOption>> Search(string searchTerm, int page = -1)
     {
@@ -108,21 +107,21 @@ public class SpotifyAuthService : IAuthenticationService
 
         if (searchResponse == null) return returnList;
 
-        if (searchResponse.Tracks?.Items != null)
+      
+        if (searchResponse.Artists.Items != null)
         {
-            foreach (var track in searchResponse.Tracks.Items)
+            foreach (var artist in searchResponse.Artists.Items)
             {
-                var trackName = $"{string.Join(", ", track.Artists.Select(art => art.Name))} - {track.Name}";
                 var chartOption = new ChartOption
                 {
-                    Id = track.Id,
-                    Name = trackName,
-                    Type = ChartOptionType.Track
+                    Id = artist.Id,
+                    Name = artist.Name,
+                    Type = ChartOptionType.Artist
                 };
                 returnList.Add(chartOption);
             }
         }
-
+        
         if (searchResponse.Albums.Items != null)
         {
             foreach (var album in searchResponse.Albums.Items)
@@ -137,15 +136,16 @@ public class SpotifyAuthService : IAuthenticationService
             }
         }
 
-        if (searchResponse.Artists.Items != null)
+        if (searchResponse.Tracks?.Items != null)
         {
-            foreach (var artist in searchResponse.Artists.Items)
+            foreach (var track in searchResponse.Tracks.Items)
             {
+                var trackName = $"{string.Join(", ", track.Artists.Select(art => art.Name))} - {track.Name}";
                 var chartOption = new ChartOption
                 {
-                    Id = artist.Id,
-                    Name = artist.Name,
-                    Type = ChartOptionType.Artist
+                    Id = track.Id,
+                    Name = trackName,
+                    Type = ChartOptionType.Track
                 };
                 returnList.Add(chartOption);
             }
@@ -167,6 +167,16 @@ public class SpotifyAuthService : IAuthenticationService
         }
 
         return returnList;
+    }
+    
+    public async Task GetInfo(string id)
+    {
+        
+        spotify ??= GetSpotifyClient();
+        if (spotify == null) return;
+        
+        var info = await spotify.Tracks.Get(id);
+        
     }
 
     private SpotifyClient GetSpotifyClient()
@@ -203,4 +213,6 @@ public class SpotifyAuthService : IAuthenticationService
 
         return spotify;
     }
+
+   
 }

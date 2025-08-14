@@ -2,55 +2,26 @@
 @using BreadCharts.Core.Models
 @using BreadCharts.Core.Services
 @using SpotifyAPI.Web
-@using System.Timers;
+@using BreadCharts.Web.Components.Charts
 
 @inject NavigationManager NavigationManager;
 @inject SpotifyAuthService spotifyService;
 
 <PageTitle>Home</PageTitle>
 
-<FluentStack Orientation="Orientation.Vertical">
+<FluentStack Orientation="Orientation.Vertical" Class="overflow-y">
     @if (spotifyService.Authed)
     {
         <FluentStack>
             <p>Welcome @(username)!</p>
         </FluentStack>
-        @* <FluentStack> *@
-        @*     <p>Choose a song</p> *@
-        @*     <FluentCombobox  *@
-        @*         Name="top-box" *@
-        @*         Placeholder="Make a selection..."  *@
-        @*         Label="Best song"  *@
-        @*         Autofocus="false"  *@
-        @*         Items="@TrackOptions"  *@
-        @*         @bind-Value="@selectedOption"  *@
-        @*         Height="200px"  *@
-        @*         Immediate ImmediateDelay="100" *@
-        @*         OptionText="@(i => $"{string.Join(", ", i.Artists.Select(art => art.Name))} - {i.Name}")" /> *@
-        @*     <p>Selected: @selectedOption</p> *@
-        @* </FluentStack> *@
-        <FluentStack>
-            <FluentSearch @ref=searchTest 
-                          @bind-Value="SearchValue"
-                          @bind-Value:after="HandleClear"
-                          @oninput="@(e => SearchValue = e.Value?.ToString())"
-                          Placeholder="Search Spotify" />
-            <br />
-            <FluentCombobox Name="search-results" 
-                aria-label="search results"
-                Items="@ChartOptions" 
-                OptionText="@(i => i.Name)"/>
-
-        </FluentStack>
-        
-        
-
+        <ChartPicker/>
     }
     else
     {
         <FluentButton IconStart="@(new Icons.Regular.Size16.ArrowClockwise())"
                       Loading="@loading"
-                      OnClick="@StartLoadingAsync">
+                      OnClick="@ExternalAuthChallenge">
             Auth Spotify
         </FluentButton>
     }
@@ -67,28 +38,6 @@
     string selectedOption;
     string selectedChartOption;
     static string defaultResultsText = "no results";
-
-    FluentSearch? searchTest;
-    private Timer? timer = null;
-    
-    string? searchValue = string.Empty;
-    private string? SearchValue
-    {
-        get => searchValue;
-        set
-        {
-            if (value != searchValue)
-            {
-                searchValue = value;
-                DisposeTimer();
-                //ShowMessageBar the debounce time in ms to the timer below
-                timer = new Timer(400);
-                timer.Elapsed += TimerElapsed_TickAsync;
-                timer.Enabled = true;
-                timer.Start();
-            }
-        }
-    }
     
     string username;
     
@@ -102,62 +51,13 @@
             {
                 username = userProfile.Name;
             }
-            // var topTracks = await spotifyService.GetBasicTracks();
-            // if (topTracks?.Count > 0) TrackOptions.AddRange(topTracks);
         }
     }
 
-    async Task StartLoadingAsync()
+    async Task ExternalAuthChallenge()
     {
         var challengeUri = spotifyService.LoginChallenge();
         NavigationManager.NavigateTo(challengeUri.ToString());
     }
-    
-    private async void TimerElapsed_TickAsync(object? sender, EventArgs e)
-    {
-        DisposeTimer();
-        await InvokeAsync(OnSearch);
-    }
 
-    private void DisposeTimer()
-    {
-        if (timer != null)
-        {
-            timer.Enabled = false;
-            timer.Elapsed -= TimerElapsed_TickAsync;
-            timer.Dispose();
-            timer = null;
-        }
-    }
-    
-    private void HandleClear()
-    {
-        if (string.IsNullOrWhiteSpace(SearchValue))
-            return;
-
-        DisposeTimer();
-        ChartOptions = new();
-        SearchValue = string.Empty;
-        StateHasChanged();
-    }
-    
-    void OnSearch()
-    {
-        if (string.IsNullOrWhiteSpace(searchValue))
-        {
-            ChartOptions.Clear();
-            searchValue = string.Empty;
-        }
-        else
-        {
-            string searchTerm = searchValue.ToLower();
-
-            if (searchTerm.Length > 0)
-            {
-                var results = spotifyService.Search(searchTerm).Result;
-                ChartOptions = results;
-            }
-        }
-        StateHasChanged();
-    }
 }

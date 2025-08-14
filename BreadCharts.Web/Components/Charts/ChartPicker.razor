@@ -1,0 +1,170 @@
+@using System.Timers;
+@using BreadCharts.Core.Models
+@using BreadCharts.Core.Services
+@inject SpotifyAuthService SpotifyAuthService
+
+<FluentStack Orientation="Orientation.Vertical" Class="overflow-y">
+    <FluentSearch @ref=searchTest
+                  @bind-Value="SearchValue"
+                  @bind-Value:after="HandleClear"
+                  @oninput="@(e => SearchValue = e.Value?.ToString())"
+                  Placeholder="Search for songs" />
+    <br />
+    <FluentStack Orientation="Orientation.Horizontal" Class="overflow-y">
+        <FluentListbox
+            Class="overflow-y"
+            aria-label="search results"
+            Items=@searchResults
+            TOption="ChartOption"
+            @bind-SelectedOption="SelectedChartOption"
+            OptionValue="@(option => option.Id)"
+            Height="300px"
+        >
+            <OptionTemplate>
+                <FluentStack Orientation="Orientation.Horizontal">
+                    @GetIconForChartOptionType(context.Type)
+                    <span>
+                        @context.Name
+                    </span>
+                    @if (context.Type != ChartOptionType.Track)
+                    {
+                        <FluentSpacer></FluentSpacer>
+                        <FluentIcon Icon="Icons.Regular.Size20.ChevronRight" Slot="end"/>
+                    }
+                </FluentStack>
+       
+            </OptionTemplate>
+        </FluentListbox>
+        @if (SelectedChartOption != null)
+        {
+            <ChartItemInfo ChartOption="@SelectedChartOption" />
+
+        }
+    </FluentStack>
+</FluentStack>
+
+
+
+@code {
+    private Timer? timer = null;
+
+    private FluentSearch? searchTest;
+
+    private string? searchValue = string.Empty;
+
+    private string? SearchValue
+    {
+        get => searchValue;
+        set
+        {
+            if (value != searchValue)
+            {
+                searchValue = value;
+                DisposeTimer();
+                //ShowMessageBar the debounce time in ms to the timer below
+                timer = new Timer(600);
+                timer.Elapsed += TimerElapsed_TickAsync;
+                timer.Enabled = true;
+                timer.Start();
+            }
+        }
+    }
+
+    public ChartOption? SelectedChartOption { get; set; }
+
+    private List<ChartOption> searchResults = defaultResults();
+
+    private static ChartOption defaultResultsText = new ()
+    {
+        Id = "no-options",
+        Name = "No Results"
+    };
+
+    protected override async Task OnInitializedAsync()
+    {
+        
+    }
+
+
+    private static List<ChartOption> defaultResults()
+    {
+        return new() { defaultResultsText };
+    }
+
+    private async void TimerElapsed_TickAsync(object? sender, EventArgs e)
+    {
+        DisposeTimer();
+        await InvokeAsync(OnSearch);
+    }
+
+    private void DisposeTimer()
+    {
+        if (timer != null)
+        {
+            timer.Enabled = false;
+            timer.Elapsed -= TimerElapsed_TickAsync;
+            timer.Dispose();
+            timer = null;
+        }
+    }
+
+    private async Task OnSearch()
+    {
+        if (!string.IsNullOrWhiteSpace(SearchValue))
+        {
+            string searchTerm = SearchValue.ToLower();
+
+            //You can also call an API here if the list is not local
+            searchResults = await SpotifyAuthService.Search(searchTerm);
+            
+
+            if (!searchResults.Any())
+            {
+                searchResults = defaultResults();
+            }
+            StateHasChanged();
+        }
+        else
+        {
+            searchResults = defaultResults();
+            StateHasChanged();
+        }
+    }
+
+    private void HandleClear()
+    {
+        if (string.IsNullOrWhiteSpace(SearchValue))
+            return;
+
+        DisposeTimer();
+        searchResults = defaultResults();
+        SearchValue = string.Empty;
+        StateHasChanged();
+    }
+
+    private RenderFragment GetIconForChartOptionType(ChartOptionType chartOptionType) => builder =>
+    {
+        try
+        {
+            Type iconType = chartOptionType switch
+            {
+                ChartOptionType.Artist => typeof(Icons.Regular.Size20.Person),
+                ChartOptionType.Album => typeof(Icons.Regular.Size20.Album),
+                ChartOptionType.Track => typeof(Icons.Regular.Size20.SoundWaveCircle),
+                ChartOptionType.Playlist => typeof(Icons.Regular.Size20.ListBar),
+                _ => typeof(Icons.Regular.Size20.Question)
+            };
+
+            var fluentIconType = typeof(FluentIcon<>).MakeGenericType(iconType);
+            builder.OpenComponent(0, fluentIconType);
+            builder.AddAttribute(1, "Slot", "start");
+            builder.CloseComponent();
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Error rendering icon: {ex.Message}");
+        }
+
+
+    };
+}

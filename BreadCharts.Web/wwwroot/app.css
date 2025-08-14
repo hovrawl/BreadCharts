@@ -28,6 +28,9 @@ body {
     padding: 0.5rem 1.5rem;
     align-self: stretch !important;
     width: 100%;
+    display: flex;
+    flex-direction: column;
+    overflow: auto;
 }
 
 .manage {
@@ -123,6 +126,10 @@ footer {
     .loading-progress-text:after {
         content: var(--blazor-load-percentage-text, "Loading");
     }
+    
+.overflow-y {
+    overflow-y: auto;
+}
 
 code {
     color: #c02d76;

@@ -1,0 +1,53 @@
+@using BreadCharts.Core.Models
+@using BreadCharts.Core.Services
+
+@inject SpotifyAuthService SpotifyAuthService
+
+<FluentStack Orientation="Orientation.Vertical">
+    @if (ChartOption != null)
+    {
+        <b>
+            @ChartOption.Name
+        </b>
+        <br/>
+        <FluentStack Orientation="Orientation.Vertical">
+            @switch (ChartOption.Type)
+            {
+                case ChartOptionType.Artist:
+                {
+                    <ChartArtistInfo></ChartArtistInfo>
+                    break;
+                }
+                case ChartOptionType.Album:
+                {
+                    <ChartAlbumInfo></ChartAlbumInfo>
+                    break;
+                }
+                case ChartOptionType.Playlist:
+                {
+                    <ChartPlaylistInfo></ChartPlaylistInfo>
+                    break;
+                }
+                case ChartOptionType.Track:
+                {
+                    <ChartTrackInfo></ChartTrackInfo>
+                    break;
+                }
+            }
+        </FluentStack>
+    }
+</FluentStack>
+
+@code {
+    [Parameter] public ChartOption ChartOption { get; set; } = default!;
+
+    protected override async Task OnInitializedAsync()
+    {
+        if (ChartOption != null)
+        {
+            
+        }
+        
+    }
+
+}

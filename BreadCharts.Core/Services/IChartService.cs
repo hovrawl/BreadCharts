@@ -9,11 +9,11 @@ public interface IChartService
 
 public class ChartService : IChartService
 {
-    private readonly SpotifyAuthService spotifyAuthService;
+    private readonly ISpotifyClientService spotifyClientService;
     
-    public ChartService(SpotifyAuthService spotifyAuthService)
+    public ChartService(ISpotifyClientService spotifyClientService)
     {
-        this.spotifyAuthService = spotifyAuthService;
+        this.spotifyClientService = spotifyClientService;
     }
     
     public List<ChartOption> SearchChartOptions(string searchTerm)

@@ -6,7 +6,6 @@
 @using Microsoft.AspNetCore.Identity
 
 @inject NavigationManager NavigationManager
-@inject SpotifyAuthService SpotifyAuthService
 @inject UserManager<ApplicationUser> UserManager
 @inject SignInManager<ApplicationUser> SignInManager
 @inject IHttpContextAccessor HttpContextAccessor
@@ -90,12 +89,7 @@
         await SignInManager.SignInAsync(user, isPersistent: true);
         await http.SignOutAsync(IdentityConstants.ExternalScheme);
 
-        // Configure in-memory Spotify service for immediate use
-        if (!string.IsNullOrEmpty(access))
-        {
-            SpotifyAuthService.SetTokens(access, refresh);
-        }
-
+        // Client creation is on-demand per user; no in-memory token hydration needed
         NavigationManager.NavigateTo("/", replace: true);
     }
 }

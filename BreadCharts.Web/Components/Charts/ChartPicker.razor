@@ -1,7 +1,11 @@
 @using System.Timers;
 @using BreadCharts.Core.Models
 @using BreadCharts.Core.Services
-@inject SpotifyAuthService SpotifyAuthService
+@using BreadCharts.Web.Data
+@using Microsoft.AspNetCore.Identity
+@inject ISpotifyClientService SpotifyClientService
+@inject UserManager<ApplicationUser> UserManager
+@inject IHttpContextAccessor HttpContextAccessor
 
 <FluentStack Orientation="Orientation.Vertical" Class="overflow-y">
     <FluentSearch @ref=searchTest
@@ -114,7 +118,11 @@
             string searchTerm = SearchValue.ToLower();
 
             //You can also call an API here if the list is not local
-            var results = await SpotifyAuthService.Search(searchTerm);
+            var context = HttpContextAccessor.HttpContext;
+            var user = context != null ? await UserManager.GetUserAsync(context.User) : null;
+            var results = user is not null && !string.IsNullOrEmpty(user.AccessToken)
+                ? await SpotifyClientService.Search(user.Id, user.AccessToken!, user.RefreshToken, searchTerm)
+                : new List<ChartOption>();
             searchResults = results
                 .OrderBy(o => SortKey(o.Name, searchTerm))
                 .ThenBy(o => o.Name, StringComparer.CurrentCultureIgnoreCase)

@@ -3,14 +3,18 @@
 @using BreadCharts.Core.Services
 @using SpotifyAPI.Web
 @using BreadCharts.Web.Components.Charts
+@using BreadCharts.Web.Data
+@using Microsoft.AspNetCore.Identity
 
 @inject NavigationManager NavigationManager;
-@inject SpotifyAuthService spotifyService;
+@inject ISpotifyClientService SpotifyClientService;
+@inject UserManager<ApplicationUser> UserManager;
+@inject IHttpContextAccessor HttpContextAccessor;
 
 <PageTitle>Home</PageTitle>
 
 <FluentStack Orientation="Orientation.Vertical" Class="overflow-y">
-    @if (spotifyService.Authed)
+    @if (authed)
     {
         <FluentStack>
             <p>Welcome @(username)!</p>
@@ -39,13 +43,18 @@
     
     protected override async Task OnInitializedAsync()
     {
-        authed = spotifyService.Authed;
+        var context = HttpContextAccessor.HttpContext;
+        authed = context?.User?.Identity?.IsAuthenticated == true;
         if (authed)
         {
-            var userProfile = await spotifyService.GetUserProfile();
-            if (userProfile != null)
+            var user = await UserManager.GetUserAsync(context!.User);
+            if (user is not null && !string.IsNullOrEmpty(user.AccessToken))
             {
-                username = userProfile.Name;
+                var userProfile = await SpotifyClientService.GetUserProfile(user.Id, user.AccessToken!, user.RefreshToken);
+                if (userProfile != null)
+                {
+                    username = userProfile.Name;
+                }
             }
         }
     }

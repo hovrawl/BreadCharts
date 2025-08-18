@@ -15,7 +15,7 @@ var builder = WebApplication.CreateBuilder(args);
 builder.Services.AddRazorComponents()
     .AddInteractiveServerComponents();
 builder.Services.AddFluentUIComponents();
-builder.Services.AddSingleton<SpotifyAuthService>();
+builder.Services.AddSingleton<ISpotifyClientService, SpotifyClientService>();
 builder.Services.AddScoped<IChartService, ChartService>();
 builder.Services.AddHttpContextAccessor();
 
@@ -165,7 +165,6 @@ app.MapGet("/auth/finalize", async (
     HttpContext http,
     [FromServices] UserManager<ApplicationUser> userManager,
     [FromServices] SignInManager<ApplicationUser> signInManager,
-    [FromServices] SpotifyAuthService spotifyAuthService,
     [FromQuery] string? returnUrl) =>
 {
     // Read the external authentication result created by the OAuth middleware
@@ -222,11 +221,7 @@ app.MapGet("/auth/finalize", async (
     await signInManager.SignInAsync(user, isPersistent: true);
     await http.SignOutAsync(IdentityConstants.ExternalScheme);
 
-    // Optionally hydrate any in-memory services that rely on the tokens
-    if (!string.IsNullOrEmpty(access))
-    {
-        spotifyAuthService.SetTokens(access, refresh);
-    }
+    // No-op: services will create user-scoped Spotify clients on demand using cached tokens
 
     // Redirect to final destination (default home)
     var destination = string.IsNullOrWhiteSpace(returnUrl) ? "/" : returnUrl;

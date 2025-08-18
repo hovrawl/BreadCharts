@@ -6,6 +6,8 @@ using Microsoft.FluentUI.AspNetCore.Components;
 using BreadCharts.Web.Components;
 using BreadCharts.Web.Components.Account;
 using BreadCharts.Web.Data;
+using Microsoft.AspNetCore.Authentication;
+using Microsoft.AspNetCore.Mvc;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -15,18 +17,91 @@ builder.Services.AddRazorComponents()
 builder.Services.AddFluentUIComponents();
 builder.Services.AddSingleton<SpotifyAuthService>();
 builder.Services.AddScoped<IChartService, ChartService>();
+builder.Services.AddHttpContextAccessor();
 
 builder.Services.AddCascadingAuthenticationState();
 builder.Services.AddScoped<IdentityUserAccessor>();
 builder.Services.AddScoped<IdentityRedirectManager>();
 builder.Services.AddScoped<AuthenticationStateProvider, IdentityRevalidatingAuthenticationStateProvider>();
 
-builder.Services.AddAuthentication(options =>
+var authBuilder = builder.Services.AddAuthentication(options =>
     {
         options.DefaultScheme = IdentityConstants.ApplicationScheme;
         options.DefaultSignInScheme = IdentityConstants.ExternalScheme;
-    })
-    .AddIdentityCookies();
+    });
+
+authBuilder.AddOAuth("Spotify", options =>
+{
+    options.SignInScheme = IdentityConstants.ExternalScheme;
+    options.ClientId = builder.Configuration["AuthServiceConfig:ClientId"] ?? string.Empty;
+    options.ClientSecret = builder.Configuration["AuthServiceConfig:ClientSecret"] ?? string.Empty;
+    // Use a dedicated middleware callback path so the OAuth handler can validate state
+    options.CallbackPath = "/signin-spotify";
+    options.AuthorizationEndpoint = "https://accounts.spotify.com/authorize";
+    options.TokenEndpoint = "https://accounts.spotify.com/api/token";
+    options.UserInformationEndpoint = "https://api.spotify.com/v1/me";
+    options.SaveTokens = true;
+    options.Scope.Add("user-read-email");
+    options.Scope.Add("user-read-private");
+    options.Scope.Add("user-top-read");
+    options.Scope.Add("playlist-modify-private");
+    options.Scope.Add("playlist-modify-public");
+    options.Scope.Add("streaming");
+
+    // Harden correlation cookie to reduce SameSite issues
+    options.CorrelationCookie.SameSite = SameSiteMode.Lax;
+    options.CorrelationCookie.SecurePolicy = CookieSecurePolicy.Always;
+    options.CorrelationCookie.HttpOnly = true;
+
+    options.Events = new Microsoft.AspNetCore.Authentication.OAuth.OAuthEvents
+    {
+        OnCreatingTicket = async context =>
+        {
+            using var request = new System.Net.Http.HttpRequestMessage(System.Net.Http.HttpMethod.Get, context.Options.UserInformationEndpoint);
+            request.Headers.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", context.AccessToken);
+            using var response = await context.Backchannel.SendAsync(request, System.Net.Http.HttpCompletionOption.ResponseHeadersRead, context.HttpContext.RequestAborted);
+            response.EnsureSuccessStatusCode();
+            using var json = System.Text.Json.JsonDocument.Parse(await response.Content.ReadAsStringAsync());
+            var root = json.RootElement;
+
+            if (root.TryGetProperty("display_name", out var displayNameEl))
+            {
+                var displayName = displayNameEl.GetString();
+                if (!string.IsNullOrEmpty(displayName))
+                {
+                    context.Identity!.AddClaim(new System.Security.Claims.Claim(System.Security.Claims.ClaimTypes.Name, displayName));
+                }
+            }
+            if (root.TryGetProperty("email", out var emailEl))
+            {
+                var email = emailEl.GetString();
+                if (!string.IsNullOrEmpty(email))
+                {
+                    context.Identity!.AddClaim(new System.Security.Claims.Claim(System.Security.Claims.ClaimTypes.Email, email));
+                }
+            }
+            if (root.TryGetProperty("id", out var idEl))
+            {
+                var id = idEl.GetString();
+                if (!string.IsNullOrEmpty(id))
+                {
+                    context.Identity!.AddClaim(new System.Security.Claims.Claim("urn:spotify:id", id));
+                }
+            }
+
+            if (!string.IsNullOrEmpty(context.AccessToken))
+            {
+                context.Identity!.AddClaim(new System.Security.Claims.Claim("urn:spotify:access_token", context.AccessToken));
+            }
+            if (!string.IsNullOrEmpty(context.RefreshToken))
+            {
+                context.Identity!.AddClaim(new System.Security.Claims.Claim("urn:spotify:refresh_token", context.RefreshToken));
+            }
+        }
+    };
+});
+
+authBuilder.AddIdentityCookies();
 
 IHostEnvironment env = builder.Environment;
 
@@ -63,11 +138,100 @@ else
 
 app.UseHttpsRedirection();
 
+// Ensure authentication/authorization are in the pipeline before mapping components
+app.UseAuthentication();
+app.UseAuthorization();
+
 app.UseAntiforgery();
 
 app.MapStaticAssets();
 app.MapRazorComponents<App>()
     .AddInteractiveServerRenderMode();
+
+// Lightweight endpoint to initiate Spotify OAuth challenge aligned with our custom flow
+app.MapGet("/auth/spotify", (HttpContext http, string? returnUrl) =>
+{
+    // After OAuth completes at /signin-spotify, the middleware will redirect here
+    var redirectAfterOAuth = string.IsNullOrWhiteSpace(returnUrl) ? "/" : returnUrl;
+    var props = new Microsoft.AspNetCore.Authentication.AuthenticationProperties
+    {
+        RedirectUri = $"/auth/finalize?returnUrl={Uri.EscapeDataString(redirectAfterOAuth)}"
+    };
+    return Results.Challenge(props, new[] { "Spotify" });
+});
+
+// Finalize external login: exchange external cookie for app cookie, then redirect
+app.MapGet("/auth/finalize", async (
+    HttpContext http,
+    [FromServices] UserManager<ApplicationUser> userManager,
+    [FromServices] SignInManager<ApplicationUser> signInManager,
+    [FromServices] SpotifyAuthService spotifyAuthService,
+    [FromQuery] string? returnUrl) =>
+{
+    // Read the external authentication result created by the OAuth middleware
+    var extAuth = await http.AuthenticateAsync(IdentityConstants.ExternalScheme);
+    if (!(extAuth?.Succeeded ?? false) || extAuth.Principal is null)
+    {
+        return Results.Redirect("/welcome");
+    }
+
+    var principal = extAuth.Principal;
+    var spotifyId = principal.FindFirst("urn:spotify:id")?.Value;
+    var email = principal.FindFirst(System.Security.Claims.ClaimTypes.Email)?.Value;
+    var access = principal.FindFirst("urn:spotify:access_token")?.Value;
+    var refresh = principal.FindFirst("urn:spotify:refresh_token")?.Value;
+
+    // Upsert user (by external login first, then email)
+    ApplicationUser? user = null;
+    if (!string.IsNullOrEmpty(spotifyId))
+    {
+        user = await userManager.FindByLoginAsync("Spotify", spotifyId);
+    }
+    if (user is null && !string.IsNullOrEmpty(email))
+    {
+        user = await userManager.FindByEmailAsync(email);
+    }
+    if (user is null)
+    {
+        var username = email ?? $"spotify-{spotifyId}";
+        user = new ApplicationUser
+        {
+            UserName = username,
+            Email = email ?? string.Empty,
+            EmailConfirmed = true,
+            ThirdPartyId = spotifyId ?? string.Empty,
+        };
+        var createRes = await userManager.CreateAsync(user);
+        if (!createRes.Succeeded)
+        {
+            return Results.Redirect("/welcome");
+        }
+        if (!string.IsNullOrEmpty(spotifyId))
+        {
+            await userManager.AddLoginAsync(user, new UserLoginInfo("Spotify", spotifyId, "Spotify"));
+        }
+    }
+
+    // Persist tokens and third-party id
+    if (!string.IsNullOrEmpty(access)) user.AccessToken = access;
+    if (!string.IsNullOrEmpty(refresh)) user.RefreshToken = refresh;
+    if (!string.IsNullOrEmpty(spotifyId)) user.ThirdPartyId = spotifyId;
+    await userManager.UpdateAsync(user);
+
+    // Sign in with the application cookie, then clear external cookie
+    await signInManager.SignInAsync(user, isPersistent: true);
+    await http.SignOutAsync(IdentityConstants.ExternalScheme);
+
+    // Optionally hydrate any in-memory services that rely on the tokens
+    if (!string.IsNullOrEmpty(access))
+    {
+        spotifyAuthService.SetTokens(access, refresh);
+    }
+
+    // Redirect to final destination (default home)
+    var destination = string.IsNullOrWhiteSpace(returnUrl) ? "/" : returnUrl;
+    return Results.Redirect(destination);
+});
 
 // Add additional endpoints required by the Identity /Account Razor components.
 app.MapAdditionalIdentityEndpoints();

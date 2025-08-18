@@ -41,6 +41,8 @@ else
 
     protected override async Task OnInitializedAsync()
     {
+        // Provide a sensible default return URL if none is supplied via query
+        ReturnUrl ??= "/callback";
         externalLogins = (await SignInManager.GetExternalAuthenticationSchemesAsync()).ToArray();
     }
 

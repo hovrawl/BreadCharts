@@ -4,6 +4,7 @@
 @inject NavigationManager NavigationManager
 @inject IJSRuntime JS
 
+
 <FluentLayout>
     <FluentHeader>
         <FluentStack Orientation="Orientation.Horizontal">
@@ -31,8 +32,7 @@
                         OnHeaderButtonClick="@(() => NavigationManager.NavigateTo("Account/Logout"))"/>
                 </Authorized>
                 <NotAuthorized>
-                    <FluentNavLink Href="Account/Register">Register</FluentNavLink>
-                    <FluentNavLink Href="Account/Login">Login</FluentNavLink>
+                    <FluentButton Appearance="Appearance.Accent" OnClick="@(() => NavigationManager.NavigateTo("/welcome"))">Sign in with Spotify</FluentButton>
                 </NotAuthorized>
             </AuthorizeView>
         </FluentStack>
@@ -64,13 +64,8 @@
                     </Authorized>
                     <NotAuthorized>
                         <FluentAppBarItem
-                            Href="Account/Register"
-                            Text="Register"
-                            IconRest="@(new Icons.Regular.Size20.PersonAdd())"
-                            IconActive="@(new Icons.Filled.Size20.PersonAdd())"/>
-                        <FluentAppBarItem
-                            Href="Account/Login"
-                            Text="Login"
+                            Href="/welcome"
+                            Text="Sign in"
                             IconRest="@(new Icons.Regular.Size20.PersonArrowRight())"
                             IconActive="@(new Icons.Filled.Size20.PersonArrowRight())"/>
                     </NotAuthorized>
@@ -110,6 +105,8 @@
         NavigationManager.LocationChanged += OnLocationChanged;
     }
 
+    [CascadingParameter] private Task<AuthenticationState> AuthenticationStateTask { get; set; } = default!;
+
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
         if (firstRender)
@@ -117,6 +114,24 @@
             _objRef = DotNetObjectReference.Create(this);
             await JS.InvokeVoidAsync("responsive.registerMq", _objRef, BreakpointQuery);
         }
+
+        // Redirect unauthenticated users to Welcome, except when already on allowed routes
+        var authState = await AuthenticationStateTask;
+        var user = authState.User;
+        var relative = NavigationManager.ToBaseRelativePath(NavigationManager.Uri).TrimStart('/');
+        if (!(user?.Identity?.IsAuthenticated ?? false) && ShouldRedirectToWelcome(relative))
+        {
+            NavigationManager.NavigateTo("/welcome", forceLoad: false);
+        }
+    }
+
+    private static bool ShouldRedirectToWelcome(string path)
+    {
+        if (string.IsNullOrWhiteSpace(path)) return true; // home -> redirect
+        path = path.ToLowerInvariant();
+        if (path.StartsWith("welcome") || path.StartsWith("account")) return false;
+        if (path.StartsWith("_framework") || path.StartsWith("_content") || path.StartsWith("css") || path.StartsWith("js") || path.StartsWith("favicon")) return false;
+        return true;
     }
 
     public void ToggleMenu()

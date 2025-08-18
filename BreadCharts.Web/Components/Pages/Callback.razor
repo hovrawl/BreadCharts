@@ -1,70 +1,101 @@
 @page "/callback"
+@using System.Security.Claims
+@using Microsoft.AspNetCore.Authentication
 @using BreadCharts.Core.Services
-@using BreadCharts.Web.Components.Account
 @using BreadCharts.Web.Data
-@using Microsoft.AspNetCore.Authorization
 @using Microsoft.AspNetCore.Identity
-@using Microsoft.AspNetCore.WebUtilities
 
-@attribute [Authorize]
 @inject NavigationManager NavigationManager
 @inject SpotifyAuthService SpotifyAuthService
 @inject UserManager<ApplicationUser> UserManager
+@inject SignInManager<ApplicationUser> SignInManager
+@inject IHttpContextAccessor HttpContextAccessor
 
 @rendermode InteractiveServer
 
-<p>Linking your Spotify account...</p>
+<p>Finalizing your Spotify sign-in...</p>
 <FluentProgress></FluentProgress>
 
 @code {
-    [CascadingParameter] private Task<AuthenticationState> AuthenticationStateTask { get; set; } = default!;
+    private bool _completed;
 
-    private ApplicationUser? _user;
-    private string? _redirectTo;
-    private bool _navigated;
-
-   
-    
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
-        var authState = await AuthenticationStateTask;
-        var principal = authState.User;
+        if (!firstRender || _completed) return;
+        _completed = true;
 
-        if (principal?.Identity?.IsAuthenticated == true && !SpotifyAuthService.Authed)
+        var http = HttpContextAccessor.HttpContext;
+        if (http is null)
         {
-            _user = await UserManager.GetUserAsync(principal);
+            NavigationManager.NavigateTo("/welcome", replace: true);
+            return;
+        }
 
-            var uri = NavigationManager.ToAbsoluteUri(NavigationManager.Uri);
-            var query = QueryHelpers.ParseQuery(uri.Query);
+        // Read the external authentication result
+        var extAuth = await http.AuthenticateAsync(IdentityConstants.ExternalScheme);
+        if (!(extAuth?.Succeeded ?? false) || extAuth.Principal is null)
+        {
+            NavigationManager.NavigateTo("/welcome", replace: true);
+            return;
+        }
 
-            if (query.TryGetValue("code", out var code) && !string.IsNullOrEmpty(code))
+        var principal = extAuth.Principal;
+        var spotifyId = principal.FindFirst("urn:spotify:id")?.Value;
+        var email = principal.FindFirst(ClaimTypes.Email)?.Value;
+        var name = principal.FindFirst(ClaimTypes.Name)?.Value;
+        var access = principal.FindFirst("urn:spotify:access_token")?.Value;
+        var refresh = principal.FindFirst("urn:spotify:refresh_token")?.Value;
+
+        // Upsert user by external login or email
+        ApplicationUser? user = null;
+        if (!string.IsNullOrEmpty(spotifyId))
+        {
+            user = await UserManager.FindByLoginAsync("Spotify", spotifyId);
+        }
+        if (user is null && !string.IsNullOrEmpty(email))
+        {
+            user = await UserManager.FindByEmailAsync(email);
+        }
+        if (user is null)
+        {
+            // Fallback identity values if email is missing
+            var username = email ?? ($"spotify-{spotifyId}");
+            user = new ApplicationUser
             {
-                try
-                {
-                    var authed = await SpotifyAuthService.ChallengeCallback(_user!.Id, code!);
-                    _redirectTo = authed ? "/" : "/error";
-                }
-                catch (Exception ex)
-                {
-                    Console.Error.WriteLine($"Token exchange failed: {ex.Message}");
-                    _redirectTo = "/error";
-                }
+                UserName = username,
+                Email = email ?? string.Empty,
+                EmailConfirmed = true,
+                ThirdPartyId = spotifyId ?? string.Empty,
+            };
+            var createRes = await UserManager.CreateAsync(user);
+            if (!createRes.Succeeded)
+            {
+                // If creation fails, bail to welcome
+                NavigationManager.NavigateTo("/welcome", replace: true);
+                return;
+            }
+            if (!string.IsNullOrEmpty(spotifyId))
+            {
+                await UserManager.AddLoginAsync(user, new UserLoginInfo("Spotify", spotifyId, "Spotify"));
             }
         }
-        else
-        {
-            // Redirect to home
-            _redirectTo = "/";
-            // Optional: choose a sensible fallback
-            // _redirectTo = "Identity/Account/Login";
-            // await InvokeAsync(StateHasChanged);
-        }
-        
-        if (!_navigated && _redirectTo is not null)
-        {
-            _navigated = true;
-            NavigationManager.NavigateTo(_redirectTo, replace: true);
-        }
-    }
 
+        // Persist tokens on the user
+        if (!string.IsNullOrEmpty(access)) user.AccessToken = access;
+        if (!string.IsNullOrEmpty(refresh)) user.RefreshToken = refresh;
+        if (!string.IsNullOrEmpty(spotifyId)) user.ThirdPartyId = spotifyId;
+        await UserManager.UpdateAsync(user);
+
+        // Sign in the application cookie and clear the external cookie
+        await SignInManager.SignInAsync(user, isPersistent: true);
+        await http.SignOutAsync(IdentityConstants.ExternalScheme);
+
+        // Configure in-memory Spotify service for immediate use
+        if (!string.IsNullOrEmpty(access))
+        {
+            SpotifyAuthService.SetTokens(access, refresh);
+        }
+
+        NavigationManager.NavigateTo("/", replace: true);
+    }
 }

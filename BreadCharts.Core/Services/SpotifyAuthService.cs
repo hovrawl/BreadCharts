@@ -16,6 +16,14 @@ public class SpotifyAuthService : IAuthenticationService
     internal SpotifyClient? spotify;
     
     private int pageSize = 20;
+
+    public void SetTokens(string access, string? refresh = null)
+    {
+        accessToken = access;
+        if (!string.IsNullOrEmpty(refresh)) refreshToken = refresh!;
+        // Reconfigure client with token for immediate usage
+        spotify = ConfigureSpotifyClientFromToken();
+    }
     
     public bool Authed => spotify != null && !string.IsNullOrEmpty(accessToken) && !string.IsNullOrEmpty(refreshToken);
 

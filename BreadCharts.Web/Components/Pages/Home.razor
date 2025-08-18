@@ -19,11 +19,7 @@
     }
     else
     {
-        <FluentButton IconStart="@(new Icons.Regular.Size16.ArrowClockwise())"
-                      Loading="@loading"
-                      OnClick="@ExternalAuthChallenge">
-            Auth Spotify
-        </FluentButton>
+        <p>Please sign in to continue. Redirecting...</p>
     }
     
 </FluentStack>
@@ -53,11 +49,4 @@
             }
         }
     }
-
-    async Task ExternalAuthChallenge()
-    {
-        var challengeUri = spotifyService.LoginChallenge();
-        NavigationManager.NavigateTo(challengeUri.ToString());
-    }
-
 }

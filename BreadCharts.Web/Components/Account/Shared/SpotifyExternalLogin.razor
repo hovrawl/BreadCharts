@@ -1,0 +1,15 @@
+@inject NavigationManager Navigation
+
+@code {
+    [Parameter] public string ReturnUrl { get; set; } = "/";
+    [Parameter] public string Provider { get; set; } = "Spotify";
+
+    private string ChallengeUrl => $"/auth/spotify?returnUrl={Uri.EscapeDataString(ReturnUrl)}";
+}
+
+<FluentStack Orientation="Orientation.Vertical" Gap="8">
+    <FluentButton Appearance="Appearance.Accent"
+                  OnClick="@(() => Navigation.NavigateTo(ChallengeUrl, forceLoad: true))">
+        Sign in with Spotify
+    </FluentButton>
+</FluentStack>

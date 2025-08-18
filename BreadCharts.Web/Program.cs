@@ -233,7 +233,15 @@ app.MapGet("/auth/finalize", async (
     return Results.Redirect(destination);
 });
 
-// Add additional endpoints required by the Identity /Account Razor components.
-app.MapAdditionalIdentityEndpoints();
+// Minimal logout endpoint to replace templated Identity UI endpoints.
+app.MapPost("/Account/Logout", async (
+    HttpContext context,
+    [FromServices] SignInManager<ApplicationUser> signInManager,
+    [FromForm] string? returnUrl) =>
+{
+    await signInManager.SignOutAsync();
+    var target = string.IsNullOrWhiteSpace(returnUrl) ? "/welcome" : $"~/{returnUrl}";
+    return TypedResults.LocalRedirect(target);
+});
 
 app.Run();

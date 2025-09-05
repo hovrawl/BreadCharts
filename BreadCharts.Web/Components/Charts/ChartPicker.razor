@@ -6,6 +6,7 @@
 @inject ISpotifyClientService SpotifyClientService
 @inject UserManager<ApplicationUser> UserManager
 @inject IHttpContextAccessor HttpContextAccessor
+@inject NavigationManager NavigationManager
 
 <FluentStack Orientation="Orientation.Vertical" Class="overflow-y">
     <FluentSearch @ref=searchTest
@@ -120,9 +121,26 @@
             //You can also call an API here if the list is not local
             var context = HttpContextAccessor.HttpContext;
             var user = context != null ? await UserManager.GetUserAsync(context.User) : null;
-            var results = user is not null && !string.IsNullOrEmpty(user.AccessToken)
-                ? await SpotifyClientService.Search(user.Id, user.AccessToken!, user.RefreshToken, searchTerm)
-                : new List<ChartOption>();
+            var access = context?.User?.FindFirst("urn:spotify:access_token")?.Value;
+            var refresh = context?.User?.FindFirst("urn:spotify:refresh_token")?.Value;
+            List<ChartOption> results;
+            if (user is not null && !string.IsNullOrEmpty(access))
+            {
+                try
+                {
+                    results = await SpotifyClientService.Search(user.Id, access!, refresh, searchTerm);
+                }
+                catch
+                {
+                    // Token invalid/refresh failed, redirect to welcome for re-auth
+                    NavigationManager.NavigateTo("/welcome", replace: true);
+                    results = new List<ChartOption>();
+                }
+            }
+            else
+            {
+                results = new List<ChartOption>();
+            }
             searchResults = results
                 .OrderBy(o => SortKey(o.Name, searchTerm))
                 .ThenBy(o => o.Name, StringComparer.CurrentCultureIgnoreCase)

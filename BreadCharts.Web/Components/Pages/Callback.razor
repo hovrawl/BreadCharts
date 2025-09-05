@@ -79,14 +79,15 @@
             }
         }
 
-        // Persist tokens on the user
-        if (!string.IsNullOrEmpty(access)) user.AccessToken = access;
-        if (!string.IsNullOrEmpty(refresh)) user.RefreshToken = refresh;
+        // Persist only third-party id; do NOT persist access/refresh tokens (session-only requirement)
         if (!string.IsNullOrEmpty(spotifyId)) user.ThirdPartyId = spotifyId;
         await UserManager.UpdateAsync(user);
 
-        // Sign in the application cookie and clear the external cookie
-        await SignInManager.SignInAsync(user, isPersistent: true);
+        // Sign in with a session (non-persistent) cookie including access/refresh claims, and clear the external cookie
+        var appClaims = new List<Claim>();
+        if (!string.IsNullOrEmpty(access)) appClaims.Add(new Claim("urn:spotify:access_token", access));
+        if (!string.IsNullOrEmpty(refresh)) appClaims.Add(new Claim("urn:spotify:refresh_token", refresh));
+        await SignInManager.SignInWithClaimsAsync(user, isPersistent: false, appClaims);
         await http.SignOutAsync(IdentityConstants.ExternalScheme);
 
         // Client creation is on-demand per user; no in-memory token hydration needed

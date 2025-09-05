@@ -5,6 +5,7 @@
 @using BreadCharts.Web.Components.Charts
 @using BreadCharts.Web.Data
 @using Microsoft.AspNetCore.Identity
+@using Microsoft.AspNetCore.Authentication
 
 @inject NavigationManager NavigationManager;
 @inject ISpotifyClientService SpotifyClientService;
@@ -48,12 +49,25 @@
         if (authed)
         {
             var user = await UserManager.GetUserAsync(context!.User);
-            if (user is not null && !string.IsNullOrEmpty(user.AccessToken))
+            // Access/refresh tokens are session-only and kept in claims
+            var access = context!.User.FindFirst("urn:spotify:access_token")?.Value;
+            var refresh = context!.User.FindFirst("urn:spotify:refresh_token")?.Value;
+            if (user is not null && !string.IsNullOrEmpty(access))
             {
-                var userProfile = await SpotifyClientService.GetUserProfile(user.Id, user.AccessToken!, user.RefreshToken);
-                if (userProfile != null)
+                try
                 {
-                    username = userProfile.Name;
+                    var userProfile = await SpotifyClientService.GetUserProfile(user.Id, access!, refresh);
+                    if (userProfile != null)
+                    {
+                        username = userProfile.Name;
+                    }
+                }
+                catch
+                {
+                    // Token invalid/refresh failed, sign out and redirect to welcome
+                    await HttpContextAccessor.HttpContext!.SignOutAsync(IdentityConstants.ApplicationScheme);
+                    authed = false;
+                    NavigationManager.NavigateTo("/welcome", replace: true);
                 }
             }
         }

@@ -1,0 +1,53 @@
+@using BreadCharts.Core.Models
+@using BreadCharts.Core.Services
+@using BreadCharts.Web.Data
+@using Microsoft.AspNetCore.Identity
+@using SpotifyAPI.Web
+@inject SpotifyClientService SpotifyClientService
+@inject HttpContextAccessor HttpContextAccessor
+@inject UserManager<ApplicationUser> UserManager
+
+<FluentStack>
+    
+    <FluentStack>
+        @* header (pic + name) *@
+        @* subtitle (optional) *@
+        @* description *@    
+        <b>@Model.Name</b>
+    </FluentStack>
+    
+    <FluentStack>
+        @* return values *@
+        @* popular *@
+    
+        @* albums *@
+    
+        @* playlists *@
+    </FluentStack>
+    
+</FluentStack>
+
+@code {
+    [Parameter] public ChartOption Model { get; set; } = default!;
+
+    public string ImageUrl;
+
+    protected override async Task OnInitializedAsync()
+    {
+        //You can also call an API here if the list is not local
+        var context = HttpContextAccessor.HttpContext;
+        var user = context != null ? await UserManager.GetUserAsync(context.User) : null;
+        var access = context?.User?.FindFirst("urn:spotify:access_token")?.Value;
+        var refresh = context?.User?.FindFirst("urn:spotify:refresh_token")?.Value;
+        var results = user is not null && !string.IsNullOrEmpty(access)
+            ? await SpotifyClientService.GetArtist(user.Id, access!, refresh, Model.Id)
+            : null;
+        
+        if (string.IsNullOrEmpty(ImageUrl))
+        {
+            
+        }
+        await base.OnInitializedAsync();
+    }
+
+}

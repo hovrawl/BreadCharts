@@ -1,11 +1,15 @@
 ﻿@using BreadCharts.Web.Components.Account.Shared
+@using BreadCharts.Web.Components.Shared
+
 <Router AppAssembly="typeof(Program).Assembly">
     <Found Context="routeData">
-        <AuthorizeRouteView RouteData="routeData" DefaultLayout="typeof(Layout.MainLayout)">
-            <NotAuthorized>
-                <RedirectToWelcome/>
-            </NotAuthorized>
-        </AuthorizeRouteView>
+        <GlobalErrorBoundary>
+            <AuthorizeRouteView RouteData="routeData" DefaultLayout="typeof(Layout.MainLayout)">
+                <NotAuthorized>
+                    <RedirectToWelcome/>
+                </NotAuthorized>
+            </AuthorizeRouteView>
+        </GlobalErrorBoundary>
         <FocusOnNavigate RouteData="routeData" Selector="h1"/>
     </Found>
 </Router>

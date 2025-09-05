@@ -1,6 +1,7 @@
 using System.Collections.Concurrent;
 using BreadCharts.Core.Infrastructure;
 using BreadCharts.Core.Models;
+using BreadCharts.Core.Models.Mapping;
 using Microsoft.Extensions.Configuration;
 using SpotifyAPI.Web;
 
@@ -22,26 +23,41 @@ public class SpotifyClientService : ISpotifyClientService
         _clientSecret = authServiceConfig.ClientSecret;
     }
 
-    public SpotifyClient GetClient(string userId, string accessToken, string? refreshToken = null)
+    public async Task<SpotifyClient> GetClient(string userId, string accessToken, string? refreshToken = null)
     {
         if (string.IsNullOrWhiteSpace(userId)) throw new ArgumentException("userId is required", nameof(userId));
         if (string.IsNullOrWhiteSpace(accessToken)) throw new ArgumentException("accessToken is required", nameof(accessToken));
 
-        // If a client exists, return it. We keep it simple without token refresh for now.
-        if (_clients.TryGetValue(userId, out var existing))
+        // If a client exists for this user and current access token, return it.
+        var cacheKey = $"{userId}:{accessToken}";
+        if (_clients.TryGetValue(cacheKey, out var existing))
         {
             return existing;
         }
 
-        var config = SpotifyClientConfig.CreateDefault().WithToken(accessToken);
+        // Configure an authenticator that will auto-refresh tokens when 401/expired
+        IAuthenticator authenticator = !string.IsNullOrEmpty(refreshToken)
+            ? new AuthorizationCodeAuthenticator(_clientId, _clientSecret, new AuthorizationCodeTokenResponse
+            {
+                AccessToken = accessToken,
+                RefreshToken = refreshToken,
+                TokenType = "Bearer",
+                ExpiresIn = 3600 // Spotify typically issues 1-hour tokens; actual value isn't critical here
+            })
+            : new TokenAuthenticator(accessToken, "Bearer");
+
+        var config = SpotifyClientConfig
+            .CreateDefault()
+            .WithAuthenticator(authenticator);
+
         var client = new SpotifyClient(config);
-        _clients[userId] = client;
+        _clients[cacheKey] = client;
         return client;
     }
 
     public async Task<UserProfile?> GetUserProfile(string userId, string accessToken, string? refreshToken = null)
     {
-        var spotify = GetClient(userId, accessToken, refreshToken);
+        var spotify = await GetClient(userId, accessToken, refreshToken);
         var privateUser = await spotify.UserProfile.Current();
         if (privateUser == null) return null;
         return new UserProfile
@@ -53,7 +69,7 @@ public class SpotifyClientService : ISpotifyClientService
 
     public async Task<List<FullTrack>> GetBasicTracks(string userId, string accessToken, string? refreshToken = null)
     {
-        var spotify = GetClient(userId, accessToken, refreshToken);
+        var spotify = await GetClient(userId, accessToken, refreshToken);
         var returnList = new List<FullTrack>();
         var tracksResponse = await spotify.UserProfile.GetTopTracks(new UsersTopItemsRequest(TimeRange.MediumTerm));
         if (tracksResponse?.Items == null) return returnList;
@@ -62,7 +78,7 @@ public class SpotifyClientService : ISpotifyClientService
 
     public async Task<List<ChartOption>> Search(string userId, string accessToken, string? refreshToken, string searchTerm, int page = -1)
     {
-        var spotify = GetClient(userId, accessToken, refreshToken);
+        var spotify = await GetClient(userId, accessToken, refreshToken);
         var returnList = new List<ChartOption>();
         if (string.IsNullOrWhiteSpace(searchTerm)) return returnList;
 
@@ -79,22 +95,21 @@ public class SpotifyClientService : ISpotifyClientService
         {
             foreach (var artist in searchResponse.Artists.Items)
             {
-                returnList.Add(new ChartOption { Id = artist.Id, Name = artist.Name, Type = ChartOptionType.Artist });
+                returnList.Add(artist.ToChartOption());
             }
         }
         if (searchResponse.Albums.Items != null)
         {
             foreach (var album in searchResponse.Albums.Items)
             {
-                returnList.Add(new ChartOption { Id = album.Id, Name = album.Name, Type = ChartOptionType.Album });
+                returnList.Add(album.ToChartOption());
             }
         }
         if (searchResponse.Tracks?.Items != null)
         {
             foreach (var track in searchResponse.Tracks.Items)
             {
-                var trackName = $"{string.Join(", ", track.Artists.Select(art => art.Name))} - {track.Name}";
-                returnList.Add(new ChartOption { Id = track.Id, Name = trackName, Type = ChartOptionType.Track });
+                returnList.Add(track.ToChartOption());
             }
         }
         if (searchResponse.Playlists.Items != null)
@@ -102,9 +117,17 @@ public class SpotifyClientService : ISpotifyClientService
             foreach (var playlist in searchResponse.Playlists.Items)
             {
                 if (playlist == null) continue;
-                returnList.Add(new ChartOption { Id = playlist.Id, Name = playlist.Name, Type = ChartOptionType.Playlist });
+                returnList.Add(playlist.ToChartOption());
             }
         }
         return returnList;
+    }
+    
+    public async Task<FullArtist> GetArtist(string userId, string accessToken, string? refreshToken, string id)
+    {
+        var spotify = await GetClient(userId, accessToken, refreshToken);
+        if (string.IsNullOrWhiteSpace(id)) return null;
+        var artist = await spotify.Artists.Get(id);
+        return artist;
     }
 }

@@ -30,29 +30,31 @@ var authBuilder = builder.Services.AddAuthentication(options =>
         options.DefaultSignInScheme = IdentityConstants.ExternalScheme;
     });
 
-authBuilder.AddOAuth("Spotify", options =>
+authBuilder.AddSpotify(options =>
 {
-    options.SignInScheme = IdentityConstants.ExternalScheme;
     options.ClientId = builder.Configuration["AuthServiceConfig:ClientId"] ?? string.Empty;
     options.ClientSecret = builder.Configuration["AuthServiceConfig:ClientSecret"] ?? string.Empty;
-    // Use a dedicated middleware callback path so the OAuth handler can validate state
     options.CallbackPath = "/signin-spotify";
-    options.AuthorizationEndpoint = "https://accounts.spotify.com/authorize";
-    options.TokenEndpoint = "https://accounts.spotify.com/api/token";
-    options.UserInformationEndpoint = "https://api.spotify.com/v1/me";
     options.SaveTokens = true;
-    options.Scope.Add("user-read-email");
-    options.Scope.Add("user-read-private");
-    options.Scope.Add("user-top-read");
-    options.Scope.Add("playlist-modify-private");
-    options.Scope.Add("playlist-modify-public");
-    options.Scope.Add("streaming");
 
+    var scopes = new List<string>
+    {
+        SpotifyAPI.Web.Scopes.UserReadEmail,
+        SpotifyAPI.Web.Scopes.UserReadPrivate,
+        SpotifyAPI.Web.Scopes.PlaylistReadPrivate,
+        SpotifyAPI.Web.Scopes.PlaylistReadCollaborative,
+        SpotifyAPI.Web.Scopes.PlaylistModifyPrivate,
+        SpotifyAPI.Web.Scopes.PlaylistModifyPublic,
+        SpotifyAPI.Web.Scopes.UserTopRead,
+        SpotifyAPI.Web.Scopes.Streaming,
+    };
+    foreach (var s in scopes) options.Scope.Add(s);
+    
     // Harden correlation cookie to reduce SameSite issues
     options.CorrelationCookie.SameSite = SameSiteMode.Lax;
     options.CorrelationCookie.SecurePolicy = CookieSecurePolicy.Always;
     options.CorrelationCookie.HttpOnly = true;
-
+    
     options.Events = new Microsoft.AspNetCore.Authentication.OAuth.OAuthEvents
     {
         OnCreatingTicket = async context =>
@@ -211,14 +213,15 @@ app.MapGet("/auth/finalize", async (
         }
     }
 
-    // Persist tokens and third-party id
-    if (!string.IsNullOrEmpty(access)) user.AccessToken = access;
-    if (!string.IsNullOrEmpty(refresh)) user.RefreshToken = refresh;
+    // Persist only third-party id; do NOT persist access/refresh tokens (session-only requirement)
     if (!string.IsNullOrEmpty(spotifyId)) user.ThirdPartyId = spotifyId;
     await userManager.UpdateAsync(user);
 
-    // Sign in with the application cookie, then clear external cookie
-    await signInManager.SignInAsync(user, isPersistent: true);
+    // Sign in with a session (non-persistent) application cookie, carrying over access/refresh claims
+    var appClaims = new List<System.Security.Claims.Claim>();
+    if (!string.IsNullOrEmpty(access)) appClaims.Add(new System.Security.Claims.Claim("urn:spotify:access_token", access));
+    if (!string.IsNullOrEmpty(refresh)) appClaims.Add(new System.Security.Claims.Claim("urn:spotify:refresh_token", refresh ?? string.Empty));
+    await signInManager.SignInWithClaimsAsync(user, isPersistent: false, appClaims);
     await http.SignOutAsync(IdentityConstants.ExternalScheme);
 
     // No-op: services will create user-scoped Spotify clients on demand using cached tokens

@@ -35,6 +35,18 @@ public static class ChartOptionMapping
         };
     }
 
+    public static ChartOption ToChartOption(this SimpleTrack track)
+    {
+        var artists = track.Artists?.Select(a => a.Name) ?? Enumerable.Empty<string>();
+        var trackName = $"{string.Join(", ", artists)} - {track.Name}";
+        return new ChartOption
+        {
+            Id = track.Id,
+            Name = trackName,
+            Type = ChartOptionType.Track
+        };
+    }
+
     public static ChartOption ToChartOption(this FullPlaylist playlist)
     {
         return new ChartOption

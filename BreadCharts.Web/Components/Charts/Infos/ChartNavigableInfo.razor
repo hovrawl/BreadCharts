@@ -2,52 +2,149 @@
 @using BreadCharts.Core.Services
 @using BreadCharts.Web.Data
 @using Microsoft.AspNetCore.Identity
-@using SpotifyAPI.Web
-@inject SpotifyClientService SpotifyClientService
-@inject HttpContextAccessor HttpContextAccessor
+@inject ISpotifyClientService SpotifyClientService
+@inject IHttpContextAccessor HttpContextAccessor
 @inject UserManager<ApplicationUser> UserManager
 
-<FluentStack>
-    
+<FluentStack Orientation="Orientation.Vertical" Class="overflow-y">
+    <FluentStack Orientation="Orientation.Horizontal">
+        @if (Breadcrumb.Count > 0)
+        {
+            <FluentButton Appearance="Appearance.Neutral" OnClick="BackOne">Back</FluentButton>
+            <span>&nbsp;/&nbsp;</span>
+            @foreach (var crumb in Breadcrumb)
+            {
+                <span>@crumb.Name</span>
+                <span>&nbsp;/&nbsp;</span>
+            }
+        }
+    </FluentStack>
+
     <FluentStack>
-        @* header (pic + name) *@
-        @* subtitle (optional) *@
-        @* description *@    
         <b>@Model.Name</b>
     </FluentStack>
-    
-    <FluentStack>
-        @* return values *@
-        @* popular *@
-    
-        @* albums *@
-    
-        @* playlists *@
-    </FluentStack>
-    
+
+    @if (Loading)
+    {
+        <p>Loading...</p>
+    }
+    else
+    {
+        @if (Model.Type == ChartOptionType.Artist)
+        {
+            @if (ArtistTopTracks.Any())
+            {
+                <h4>Top Tracks</h4>
+                @foreach (var t in ArtistTopTracks)
+                {
+                    <FluentButton OnClick="@(() => OnSelect.InvokeAsync(t))">@t.Name</FluentButton>
+                }
+            }
+            @if (ArtistAlbums.Any())
+            {
+                <h4>Albums</h4>
+                @foreach (var a in ArtistAlbums)
+                {
+                    <FluentButton OnClick="() => NavigateTo(a)">@a.Name</FluentButton>
+                }
+            }
+        }
+        else if (Model.Type == ChartOptionType.Album)
+        {
+            @if (AlbumTracks.Any())
+            {
+                <h4>Tracks</h4>
+                @foreach (var t in AlbumTracks)
+                {
+                    <FluentButton OnClick="@(() => OnSelect.InvokeAsync(t))">@t.Name</FluentButton>
+                }
+            }
+        }
+        else if (Model.Type == ChartOptionType.Playlist)
+        {
+            @if (PlaylistTracks.Any())
+            {
+                <h4>Tracks</h4>
+                @foreach (var t in PlaylistTracks)
+                {
+                    <FluentButton OnClick="@(() => OnSelect.InvokeAsync(t))">@t.Name</FluentButton>
+                }
+            }
+        }
+    }
 </FluentStack>
 
 @code {
     [Parameter] public ChartOption Model { get; set; } = default!;
+    [Parameter] public EventCallback<ChartOption> OnSelect { get; set; }
 
-    public string ImageUrl;
+    private bool Loading;
+    private List<ChartOption> ArtistTopTracks = new();
+    private List<ChartOption> ArtistAlbums = new();
+    private List<ChartOption> AlbumTracks = new();
+    private List<ChartOption> PlaylistTracks = new();
 
-    protected override async Task OnInitializedAsync()
+    private List<ChartOption> Breadcrumb = new();
+
+    protected override async Task OnParametersSetAsync()
     {
-        //You can also call an API here if the list is not local
+        await Load();
+    }
+
+    private async Task Load()
+    {
+        Loading = true;
+        ArtistTopTracks.Clear();
+        ArtistAlbums.Clear();
+        AlbumTracks.Clear();
+        PlaylistTracks.Clear();
+
         var context = HttpContextAccessor.HttpContext;
         var user = context != null ? await UserManager.GetUserAsync(context.User) : null;
         var access = context?.User?.FindFirst("urn:spotify:access_token")?.Value;
         var refresh = context?.User?.FindFirst("urn:spotify:refresh_token")?.Value;
-        var results = user is not null && !string.IsNullOrEmpty(access)
-            ? await SpotifyClientService.GetArtist(user.Id, access!, refresh, Model.Id)
-            : null;
-        
-        if (string.IsNullOrEmpty(ImageUrl))
+        if (user is null || string.IsNullOrEmpty(access))
         {
-            
+            Loading = false;
+            return;
         }
-        await base.OnInitializedAsync();
+
+        try
+        {
+            switch (Model.Type)
+            {
+                case ChartOptionType.Artist:
+                    ArtistTopTracks = await SpotifyClientService.GetArtistTopTracksChartOptions(user.Id, access!, refresh, Model.Id);
+                    ArtistAlbums = await SpotifyClientService.GetArtistAlbumsChartOptions(user.Id, access!, refresh, Model.Id);
+                    break;
+                case ChartOptionType.Album:
+                    AlbumTracks = await SpotifyClientService.GetAlbumTracksChartOptions(user.Id, access!, refresh, Model.Id);
+                    break;
+                case ChartOptionType.Playlist:
+                    PlaylistTracks = await SpotifyClientService.GetPlaylistTracksChartOptions(user.Id, access!, refresh, Model.Id);
+                    break;
+            }
+        }
+        finally
+        {
+            Loading = false;
+            await InvokeAsync(StateHasChanged);
+        }
     }
 
+    private void NavigateTo(ChartOption option)
+    {
+        Breadcrumb.Add(Model);
+        Model = option;
+        _ = Load();
+    }
+
+    private void BackOne()
+    {
+        if (Breadcrumb.Count == 0) return;
+        var last = Breadcrumb[^1];
+        Breadcrumb.RemoveAt(Breadcrumb.Count - 1);
+        Model = last;
+        _ = Load();
+    }
 }

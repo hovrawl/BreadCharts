@@ -1,5 +1,12 @@
-<h3>ChartTrackInfo</h3>
+@using BreadCharts.Core.Models
+
+<FluentStack Orientation="Orientation.Vertical">
+    @if (ChartOption is not null)
+    {
+        <span>@ChartOption.Name</span>
+    }
+</FluentStack>
 
 @code {
-    
+    [Parameter] public ChartOption ChartOption { get; set; } = default!;
 }

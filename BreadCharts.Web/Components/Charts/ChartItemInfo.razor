@@ -2,51 +2,44 @@
 @using BreadCharts.Core.Services
 
 
-<FluentStack Orientation="Orientation.Vertical">
+<FluentStack Orientation="Orientation.Horizontal" Class="overflow-y">
     @if (ChartOption != null)
     {
-        <b>
-            @ChartOption.Name
-        </b>
-        <br/>
-        <FluentStack Orientation="Orientation.Vertical">
-            @switch (ChartOption.Type)
+        <FluentStack Orientation="Orientation.Vertical" Style="min-width: 320px;">
+            <b>@ChartOption.Name</b>
+            <br />
+            @if (ChartOption.Type == ChartOptionType.Track)
             {
-                case ChartOptionType.Artist:
-                {
-                    <ChartArtistInfo></ChartArtistInfo>
-                    break;
-                }
-                case ChartOptionType.Album:
-                {
-                    <ChartAlbumInfo></ChartAlbumInfo>
-                    break;
-                }
-                case ChartOptionType.Playlist:
-                {
-                    <ChartPlaylistInfo></ChartPlaylistInfo>
-                    break;
-                }
-                case ChartOptionType.Track:
-                {
-                    <ChartTrackInfo></ChartTrackInfo>
-                    break;
-                }
+                <ChartTrackInfo ChartOption="@ChartOption" />
+            }
+            else
+            {
+                <BreadCharts.Web.Components.Charts.Infos.ChartNavigableInfo Model="@ChartOption" OnSelect="@HandleSelect" />
             }
         </FluentStack>
+
+        @if (SelectedTrack is not null)
+        {
+            <FluentStack Orientation="Orientation.Vertical" Style="min-width: 320px;">
+                <b>Selected Track</b>
+                <ChartTrackInfo ChartOption="@SelectedTrack" />
+            </FluentStack>
+        }
     }
 </FluentStack>
 
 @code {
     [Parameter] public ChartOption ChartOption { get; set; } = default!;
 
-    protected override async Task OnInitializedAsync()
-    {
-        if (ChartOption != null)
-        {
-            
-        }
-        
-    }
+    private ChartOption? SelectedTrack;
 
+    private Task HandleSelect(ChartOption option)
+    {
+        if (option.Type == ChartOptionType.Track)
+        {
+            SelectedTrack = option;
+            StateHasChanged();
+        }
+        return Task.CompletedTask;
+    }
 }

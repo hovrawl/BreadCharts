@@ -11,6 +11,8 @@
 @inject ISpotifyClientService SpotifyClientService;
 @inject UserManager<ApplicationUser> UserManager;
 @inject IHttpContextAccessor HttpContextAccessor;
+@inject BreadCharts.Web.Services.IVotingService VotingService;
+@inject Microsoft.Extensions.Options.IOptions<BreadCharts.Web.Services.VotingOptions> VotingOptionsAccessor;
 
 <PageTitle>Home</PageTitle>
 
@@ -20,7 +22,67 @@
         <FluentStack>
             <p>Welcome @(username)!</p>
         </FluentStack>
-        <ChartPicker/>
+        <FluentButton Appearance="Appearance.Accent" OnClick="@(() => OpenSubmitDialog())">Submit Song</FluentButton>
+
+
+        @if (IsSubmitDialogOpen)
+        {
+            <div style="position: fixed; inset: 0; background: rgba(0,0,0,0.5); z-index: 1000;" @onclick="@(() => CloseSubmitDialog())">
+                <div style="position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%); width: min(1000px, 95vw); height: min(800px, 90vh);" @onclick:stopPropagation>
+                    <FluentCard Style="width: 100%; height: 100%; display: flex; flex-direction: column; padding: 12px; box-sizing: border-box;">
+                        <FluentStack Orientation="Orientation.Horizontal" Style="align-items: center; gap: 8px; margin-bottom: 8px;">
+                            <h3 style="margin: 0;">Submit a Song</h3>
+                            <FluentSpacer />
+                            <FluentButton Appearance="Appearance.Stealth" OnClick="@(() => CloseSubmitDialog())">Close</FluentButton>
+                        </FluentStack>
+                        <div style="flex: 1; min-height: 0; overflow: auto;">
+                            <ChartPicker/>
+                        </div>
+                    </FluentCard>
+                </div>
+            </div>
+        }
+
+        <FluentDivider></FluentDivider>
+        <h3>Submitted Songs (vote for your favorites)</h3>
+        <FluentStack Orientation="Orientation.Vertical">
+            @if (Submissions is null)
+            {
+                <p>Loading submissions...</p>
+            }
+            else if (Submissions.Count == 0)
+            {
+                <p>No songs have been submitted yet. Pick a track and click "Add to vote list".</p>
+            }
+            else
+            {
+                <FluentStack Orientation="Orientation.Horizontal" Style="flex-wrap: wrap; gap: 12px; align-items: stretch;">
+                    @foreach (var s in Submissions)
+                    {
+                        <FluentCard Style="width: 320px; padding: 12px;">
+                            <FluentStack Orientation="Orientation.Vertical" Style="gap: 10px;">
+                                <FluentStack Orientation="Orientation.Horizontal" Style="align-items: center; gap: 8px;">
+                                    <span style="font-weight:600;">@s.TrackName</span>
+                                    <FluentSpacer />
+                                    <FluentBadge Appearance="Appearance.Accent">@s.VoteCount vote@(s.VoteCount == 1 ? string.Empty : "s")</FluentBadge>
+                                </FluentStack>
+                                <FluentStack Orientation="Orientation.Horizontal" Style="gap: 8px;">
+                                    @if (s.HasVoted)
+                                    {
+                                        <FluentButton Appearance="Appearance.Neutral" OnClick="@(() => Unvote(s.TrackId))">Unvote</FluentButton>
+                                    }
+                                    else
+                                    {
+                                        <FluentButton Appearance="Appearance.Accent" Disabled="@DisableVoteButton" OnClick="@(() => Vote(s.TrackId))">Vote</FluentButton>
+                                    }
+                                </FluentStack>
+                            </FluentStack>
+                        </FluentCard>
+                    }
+                </FluentStack>
+                <small>You can vote up to @MaxVotesPerUser songs. You have used @CurrentVotes / @MaxVotesPerUser.</small>
+            }
+        </FluentStack>
     }
     else
     {
@@ -41,14 +103,23 @@
     static string defaultResultsText = "no results";
     
     string username;
+    string? currentUserId;
+    List<BreadCharts.Web.Services.SubmittedSongView>? Submissions;
+    int MaxVotesPerUser => VotingOptionsAccessor.Value?.MaxVotesPerUser ?? 10;
+    int CurrentVotes => Submissions?.Count(s => s.HasVoted) ?? 0;
+    bool DisableVoteButton => CurrentVotes >= MaxVotesPerUser;
     
     protected override async Task OnInitializedAsync()
     {
+        // Subscribe to voting changes to auto-refresh the list
+        VotingService.Changed += OnVotingChanged;
+
         var context = HttpContextAccessor.HttpContext;
         authed = context?.User?.Identity?.IsAuthenticated == true;
         if (authed)
         {
             var user = await UserManager.GetUserAsync(context!.User);
+            currentUserId = user?.Id;
             // Access/refresh tokens are session-only and kept in claims
             var access = context!.User.FindFirst("urn:spotify:access_token")?.Value;
             var refresh = context!.User.FindFirst("urn:spotify:refresh_token")?.Value;
@@ -61,6 +132,7 @@
                     {
                         username = userProfile.Name;
                     }
+                    await LoadSubmissions(user.Id);
                 }
                 catch
                 {
@@ -71,5 +143,45 @@
                 }
             }
         }
+    }
+
+    private async void OnVotingChanged()
+    {
+        if (!authed || string.IsNullOrEmpty(currentUserId)) return;
+        await LoadSubmissions(currentUserId);
+    }
+
+    public void Dispose()
+    {
+        VotingService.Changed -= OnVotingChanged;
+    }
+
+    // Submit Song dialog state and actions
+    bool IsSubmitDialogOpen { get; set; }
+    void OpenSubmitDialog() => IsSubmitDialogOpen = true;
+    void CloseSubmitDialog() => IsSubmitDialogOpen = false;
+
+    private async Task LoadSubmissions(string userId)
+    {
+        Submissions = await VotingService.GetSubmissionsAsync(userId);
+        await InvokeAsync(StateHasChanged);
+    }
+
+    private async Task Vote(string trackId)
+    {
+        var context = HttpContextAccessor.HttpContext;
+        var user = context != null ? await UserManager.GetUserAsync(context.User) : null;
+        if (user is null) return;
+        var res = await VotingService.VoteAsync(user.Id, trackId);
+        await LoadSubmissions(user.Id);
+    }
+
+    private async Task Unvote(string trackId)
+    {
+        var context = HttpContextAccessor.HttpContext;
+        var user = context != null ? await UserManager.GetUserAsync(context.User) : null;
+        if (user is null) return;
+        var res = await VotingService.UnvoteAsync(user.Id, trackId);
+        await LoadSubmissions(user.Id);
     }
 }

@@ -1,12 +1,54 @@
 @using BreadCharts.Core.Models
+@using BreadCharts.Web.Data
+@using BreadCharts.Web.Services
+@using Microsoft.AspNetCore.Identity
+
+@inject IVotingService VotingService
+@inject IHttpContextAccessor HttpContextAccessor
+@inject UserManager<ApplicationUser> UserManager
 
 <FluentStack Orientation="Orientation.Vertical">
     @if (ChartOption is not null)
     {
         <span>@ChartOption.Name</span>
+        <FluentButton Appearance="Appearance.Accent" OnClick="SubmitSong" Disabled="@Submitting">Add to vote list</FluentButton>
+        @if (!string.IsNullOrEmpty(Message))
+        {
+            <span>@Message</span>
+        }
     }
 </FluentStack>
 
 @code {
     [Parameter] public ChartOption ChartOption { get; set; } = default!;
+
+    private string? Message;
+    private bool Submitting;
+
+    private async Task SubmitSong()
+    {
+        if (ChartOption is null || ChartOption.Type != ChartOptionType.Track) return;
+        Submitting = true;
+        try
+        {
+            var context = HttpContextAccessor.HttpContext;
+            var user = context != null ? await UserManager.GetUserAsync(context.User) : null;
+            if (user is null)
+            {
+                Message = "You must be signed in.";
+                return;
+            }
+            var res = await VotingService.SubmitAsync(user.Id, ChartOption.Id, ChartOption.Name);
+            Message = res.message;
+        }
+        catch (Exception ex)
+        {
+            Message = $"Error: {ex.Message}";
+        }
+        finally
+        {
+            Submitting = false;
+            await InvokeAsync(StateHasChanged);
+        }
+    }
 }

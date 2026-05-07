@@ -52,15 +52,10 @@
                 <AuthorizeView>
                     <Authorized>
                         <FluentAppBarItem
-                            Href="Account/Manage"
+                            Href="/profile"
                             Text="@context.User.Identity?.Name"
                             IconRest="@(new Icons.Regular.Size20.Person())"
                             IconActive="@(new Icons.Filled.Size20.Person())"/>
-                        <form action="Account/Logout" method="post">
-                            <AntiforgeryToken/>
-                            <input type="hidden" name="ReturnUrl" value="@currentUrl"/>
-                            <FluentButton Type="ButtonType.Submit" Style="width: 100%;">Logout</FluentButton>
-                        </form>
                     </Authorized>
                     <NotAuthorized>
                         <FluentAppBarItem

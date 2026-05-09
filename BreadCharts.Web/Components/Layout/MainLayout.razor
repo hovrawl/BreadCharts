@@ -4,77 +4,97 @@
 @inject NavigationManager NavigationManager
 @inject IJSRuntime JS
 
-
-<FluentLayout>
-    <FluentHeader>
-        <FluentStack Orientation="Orientation.Horizontal">
-            <FluentIcon 
-                class="navmenu-icon"
-                Title="Toggle Menu"
-                Value="@(new Icons.Regular.Size20.Navigation())"
-                Color="Color.Fill" 
-                OnClick="@(() => ToggleMenu())"
-            />
-            <span>
-                Chart Stopper
-            </span>
-            <FluentSpacer/>
-            <AuthorizeView>
-                <Authorized>
-                    <FluentProfileMenu
-                        Status="@PresenceStatus.Available"
-                        HeaderLabel="Microsoft"
-                        Initials="@(context.User.Identity?.Name?[..1])"
-                        FullName="@context.User.Identity?.Name"
-                        EMail="@context.User.Identity?.Name"
-                        PopoverStyle="min-width: 330px;"
-                        OnFooterLinkClick="@(() => NavigationManager.NavigateTo("Account/Manage"))"
-                        OnHeaderButtonClick="@(() => NavigationManager.NavigateTo("Account/Logout"))"/>
-                </Authorized>
-                <NotAuthorized>
-                    <FluentButton Appearance="Appearance.Accent" OnClick="@(() => NavigationManager.NavigateTo("/welcome"))">Sign in with Spotify</FluentButton>
-                </NotAuthorized>
-            </AuthorizeView>
-        </FluentStack>
-    </FluentHeader>
-    <FluentStack Class="main" Orientation="Orientation.Horizontal" Width="100%">
-        <div class="navmenu">
-            <FluentAppBar
-                @ref="_appBar"
-                Id="main-menu"
-                Orientation="Orientation.Vertical"
-                data-collapsed="@_collapsed">
-                <FluentAppBarItem Href="/"
-                                  Match="NavLinkMatch.All"
-                                  IconRest="@(new Icons.Regular.Size20.Home())"
-                                  IconActive="@(new Icons.Filled.Size20.Home())"
-                                  Text="Home"/>
+<FluentProviders>
+    
+    <FluentLayout>
+        <FluentLayoutItem Area="LayoutArea.Header">
+            <FluentStack Orientation="Orientation.Horizontal">
+                <FluentIcon 
+                    class="navmenu-icon"
+                    Title="Toggle Menu"
+                    Value="@(new Icons.Regular.Size20.Navigation())"
+                    Color="Color.Default" 
+                    OnClick="@(() => ToggleMenu())"
+                />
+                <span>
+                    Chart Stopper
+                </span>
+                <FluentSpacer/>
                 <AuthorizeView>
                     <Authorized>
-                        <FluentAppBarItem
-                            Href="/profile"
-                            Text="@context.User.Identity?.Name"
-                            IconRest="@(new Icons.Regular.Size20.Person())"
-                            IconActive="@(new Icons.Filled.Size20.Person())"/>
+                        <FluentAvatar 
+                            Id="profile-avatar"
+                            Initials="@(context.User.Identity?.Name?[..1])"
+                            OnClick="@(() => profilePopoverOpened = true)"
+                            >
+                            
+                        </FluentAvatar>
+                        <FluentPopover 
+                            AnchorId="profile-avatar"
+                            bind-Opened="@profilePopoverOpened" 
+                            >
+                            <FluentStack>
+                                <FluentText>@context.User.Identity?.Name</FluentText>
+                                <FluentText>@context.User.Identity?.Name</FluentText>
+                                <FluentButton OnClick="@(() => NavigationManager.NavigateTo("Account/Manage"))">Manage</FluentButton>
+                                <FluentButton OnClick="@(() => NavigationManager.NavigateTo("Account/Logout"))">Logoff</FluentButton>
+                            </FluentStack>
+                        </FluentPopover>
+                        @* <FluentProfileMenu *@
+                        @*     Status="@PresenceStatus.Available" *@
+                        @*     HeaderLabel="Microsoft" *@
+                        @*     Initials="@(context.User.Identity?.Name?[..1])" *@
+                        @*     FullName="@context.User.Identity?.Name" *@
+                        @*     EMail="@context.User.Identity?.Name" *@
+                        @*     PopoverStyle="min-width: 330px;" *@
+                        @*     OnFooterLinkClick="@(() => NavigationManager.NavigateTo("Account/Manage"))" *@
+                        @*     OnHeaderButtonClick="@(() => NavigationManager.NavigateTo("Account/Logout"))"/> *@
                     </Authorized>
                     <NotAuthorized>
-                        <FluentAppBarItem
-                            Href="/welcome"
-                            Text="Sign in"
-                            IconRest="@(new Icons.Regular.Size20.PersonArrowRight())"
-                            IconActive="@(new Icons.Filled.Size20.PersonArrowRight())"/>
+                        <FluentButton Appearance="ButtonAppearance.Primary" OnClick="@(() => NavigationManager.NavigateTo("/welcome"))">Sign in with Spotify</FluentButton>
                     </NotAuthorized>
                 </AuthorizeView>
-            </FluentAppBar>
-        </div>
-       
-        <FluentBodyContent Class="body-content">
-            <div class="content">
-                @Body
+            </FluentStack>
+        </FluentLayoutItem>
+        <FluentStack Class="main" Orientation="Orientation.Horizontal" Width="100%">
+            <div class="navmenu">
+                <FluentAppBar
+                    @ref="_appBar"
+                    Id="main-menu"
+                    Orientation="Orientation.Vertical"
+                    data-collapsed="@_collapsed">
+                    <FluentAppBarItem Href="/"
+                                      Match="NavLinkMatch.All"
+                                      IconRest="@(new Icons.Regular.Size20.Home())"
+                                      IconActive="@(new Icons.Filled.Size20.Home())"
+                                      Text="Home"/>
+                    <AuthorizeView>
+                        <Authorized>
+                            <FluentAppBarItem
+                                Href="/profile"
+                                Text="@context.User.Identity?.Name"
+                                IconRest="@(new Icons.Regular.Size20.Person())"
+                                IconActive="@(new Icons.Filled.Size20.Person())"/>
+                        </Authorized>
+                        <NotAuthorized>
+                            <FluentAppBarItem
+                                Href="/welcome"
+                                Text="Sign in"
+                                IconRest="@(new Icons.Regular.Size20.PersonArrowRight())"
+                                IconActive="@(new Icons.Filled.Size20.PersonArrowRight())"/>
+                        </NotAuthorized>
+                    </AuthorizeView>
+                </FluentAppBar>
             </div>
-        </FluentBodyContent>
-    </FluentStack>
-</FluentLayout>
+           
+            <FluentLayoutItem Area="LayoutArea.Content" Class="body-content">
+                <div class="content">
+                    @Body
+                </div>
+            </FluentLayoutItem>
+        </FluentStack>
+    </FluentLayout>
+</FluentProviders>
 
 <div id="blazor-error-ui" data-nosnippet>
     An unhandled error has occurred.
@@ -94,6 +114,8 @@
     private FluentAppBar _appBar;
     private bool _collapsed;
 
+    private bool profilePopoverOpened = false;
+    
     protected override void OnInitialized()
     {
         currentUrl = NavigationManager.ToBaseRelativePath(NavigationManager.Uri);

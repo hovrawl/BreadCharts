@@ -11,7 +11,7 @@
     @if (ChartOption is not null)
     {
         <span>@ChartOption.Name</span>
-        <FluentButton Appearance="Appearance.Accent" OnClick="SubmitSong" Disabled="@Submitting">Add to vote list</FluentButton>
+        <FluentButton Appearance="ButtonAppearance.Primary" OnClick="SubmitSong" Disabled="@Submitting">Add to vote list</FluentButton>
         @if (!string.IsNullOrEmpty(Message))
         {
             <span>@Message</span>

@@ -9,11 +9,18 @@
 @inject NavigationManager NavigationManager
 
 <FluentStack Orientation="Orientation.Vertical" Class="overflow-y">
-    <FluentSearch @ref=searchTest
-                  @bind-Value="SearchValue"
-                  @bind-Value:after="HandleClear"
-                  @oninput="@(e => SearchValue = e.Value?.ToString())"
-                  Placeholder="Search for songs" />
+   
+    <FluentTextInput
+        @ref=searchTest
+        @bind-Value="SearchValue"
+        Appearance="TextInputAppearance.Outline"
+        @bind-Value:after="HandleClear"
+        @oninput="@(e => SearchValue = e.Value?.ToString())"
+        Placeholder="Search for songs" >
+        <StartTemplate>
+            <FluentIcon Value="@(new Icons.Regular.Size16.Search())" />
+        </StartTemplate>
+    </FluentTextInput>
     <br />
     <FluentStack Orientation="Orientation.Horizontal" Class="chart-picker overflow-y">
         <FluentListbox
@@ -52,7 +59,7 @@
 @code {
     private Timer? timer = null;
 
-    private FluentSearch? searchTest;
+    private FluentTextInput? searchTest;
 
     private string? searchValue = string.Empty;
 

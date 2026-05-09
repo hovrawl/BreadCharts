@@ -22,7 +22,7 @@
         <FluentStack>
             <p>Welcome @(username)!</p>
         </FluentStack>
-        <FluentButton Appearance="Appearance.Accent" OnClick="@(() => OpenSubmitDialog())">Submit Song</FluentButton>
+        <FluentButton Appearance="ButtonAppearance.Primary" OnClick="@(() => OpenSubmitDialog())">Submit Song</FluentButton>
 
 
         @if (IsSubmitDialogOpen)
@@ -33,7 +33,7 @@
                         <FluentStack Orientation="Orientation.Horizontal" Style="align-items: center; gap: 8px; margin-bottom: 8px;">
                             <h3 style="margin: 0;">Submit a Song</h3>
                             <FluentSpacer />
-                            <FluentButton Appearance="Appearance.Stealth" OnClick="@(() => CloseSubmitDialog())">Close</FluentButton>
+                            <FluentButton Appearance="ButtonAppearance.Default" OnClick="@(() => CloseSubmitDialog())">Close</FluentButton>
                         </FluentStack>
                         <div style="flex: 1; min-height: 0; overflow: auto;">
                             <ChartPicker/>
@@ -64,16 +64,16 @@
                                 <FluentStack Orientation="Orientation.Horizontal" Style="align-items: center; gap: 8px;">
                                     <span style="font-weight:600;">@s.TrackName</span>
                                     <FluentSpacer />
-                                    <FluentBadge Appearance="Appearance.Accent">@s.VoteCount vote@(s.VoteCount == 1 ? string.Empty : "s")</FluentBadge>
+                                    <FluentBadge Appearance="BadgeAppearance.Filled">@s.VoteCount vote@(s.VoteCount == 1 ? string.Empty : "s")</FluentBadge>
                                 </FluentStack>
                                 <FluentStack Orientation="Orientation.Horizontal" Style="gap: 8px;">
                                     @if (s.HasVoted)
                                     {
-                                        <FluentButton Appearance="Appearance.Neutral" OnClick="@(() => Unvote(s.TrackId))">Unvote</FluentButton>
+                                        <FluentButton Appearance="ButtonAppearance.Default" OnClick="@(() => Unvote(s.TrackId))">Unvote</FluentButton>
                                     }
                                     else
                                     {
-                                        <FluentButton Appearance="Appearance.Accent" Disabled="@DisableVoteButton" OnClick="@(() => Vote(s.TrackId))">Vote</FluentButton>
+                                        <FluentButton Appearance="ButtonAppearance.Primary" Disabled="@DisableVoteButton" OnClick="@(() => Vote(s.TrackId))">Vote</FluentButton>
                                     }
                                 </FluentStack>
                             </FluentStack>

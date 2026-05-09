@@ -10,7 +10,7 @@
     <FluentStack Orientation="Orientation.Horizontal">
         @if (Breadcrumb.Count > 0)
         {
-            <FluentButton Appearance="Appearance.Neutral" OnClick="BackOne">Back</FluentButton>
+            <FluentButton Appearance="ButtonAppearance.Default" OnClick="BackOne">Back</FluentButton>
             <span>&nbsp;/&nbsp;</span>
             @foreach (var crumb in Breadcrumb)
             {

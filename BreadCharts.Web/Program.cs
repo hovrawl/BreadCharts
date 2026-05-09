@@ -11,6 +11,8 @@ using Microsoft.AspNetCore.Mvc;
 
 var builder = WebApplication.CreateBuilder(args);
 
+builder.AddServiceDefaults();
+
 // Add services to the container.
 builder.Services.AddRazorComponents()
     .AddInteractiveServerComponents();
@@ -36,8 +38,8 @@ var authBuilder = builder.Services.AddAuthentication(options =>
 
 authBuilder.AddSpotify(options =>
 {
-    options.ClientId = builder.Configuration["AuthServiceConfig:ClientId"] ?? string.Empty;
-    options.ClientSecret = builder.Configuration["AuthServiceConfig:ClientSecret"] ?? string.Empty;
+    options.ClientId = builder.Configuration["Spotify:ClientId"] ?? string.Empty;
+    options.ClientSecret = builder.Configuration["Spotify:ClientSecret"] ?? string.Empty;
     options.CallbackPath = "/signin-spotify";
     options.SaveTokens = true;
 
@@ -150,6 +152,7 @@ app.UseAuthorization();
 
 app.UseAntiforgery();
 
+app.MapDefaultEndpoints();
 app.MapStaticAssets();
 app.MapRazorComponents<App>()
     .AddInteractiveServerRenderMode();

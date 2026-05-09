@@ -18,9 +18,8 @@ public class SpotifyClientService : ISpotifyClientService
 
     public SpotifyClientService(IConfiguration configRoot)
     {
-        var authServiceConfig = configRoot.GetSection("AuthServiceConfig").Get<AuthServiceConfig>();
-        _clientId = authServiceConfig.ClientId;
-        _clientSecret = authServiceConfig.ClientSecret;
+        _clientId = configRoot["Spotify:ClientId"] ?? string.Empty;
+        _clientSecret = configRoot["Spotify:ClientSecret"] ?? string.Empty;
     }
 
     public async Task<SpotifyClient> GetClient(string userId, string accessToken, string? refreshToken = null)

@@ -19,10 +19,15 @@
         <EditForm Model="Input" FormName="profile" OnValidSubmit="OnValidSubmitAsync" method="post">
             <DataAnnotationsValidator/>
             <FluentValidationSummary class="text-danger" role="alert"/>
-            <FluentTextField Value="@username" Placeholder="Please choose your username." Disabled Label="Username" Appearance=FluentInputAppearance.Filled Style="width: 100%"/>
-            <FluentTextField Name="Input.PhoneNumber" @bind-Value="Input.PhoneNumber" Placeholder="Please enter your phone number." Label="Phone number" Style="width: 100%"/>
-            <FluentValidationMessage For="() => Input.PhoneNumber" class="text-danger"/>
-            <FluentButton Type="ButtonType.Submit" Appearance="Appearance.Accent" Style="width: 100%;">Save</FluentButton>
+            <FluentStack Orientation="Orientation.Vertical">
+                <FluentField Label="Username">
+                    <FluentTextInput @bind-Value="username" Placeholder="Please choose your username." Disabled="true" Style="width: 100%"/>
+                </FluentField>
+                <FluentField Label="Phone Number" ValidationFor="@(() => Input.PhoneNumber)">
+                    <FluentTextInput @bind-Value="Input.PhoneNumber" Placeholder="Please enter your phone number." Style="width: 100%"/>
+                </FluentField>
+                <FluentButton Type="ButtonType.Submit" Appearance="ButtonAppearance.Primary" Style="width: 100%;">Save</FluentButton>
+            </FluentStack>
         </EditForm>
     </FluentGridItem>
 </FluentGrid>

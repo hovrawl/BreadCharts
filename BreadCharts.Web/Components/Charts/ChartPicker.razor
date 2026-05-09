@@ -27,9 +27,9 @@
             Class="overflow-y"
             aria-label="search results"
             Items=@searchResults
+            TValue="ChartOption"
             TOption="ChartOption"
             @bind-SelectedOption="SelectedChartOption"
-            OptionValue="@(option => option.Id)"
         >
             <OptionTemplate>
                 <FluentStack Orientation="Orientation.Horizontal">

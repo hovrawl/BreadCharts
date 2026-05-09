@@ -25,20 +25,27 @@
         <EditForm Model="Input" FormName="change-email" OnValidSubmit="OnValidSubmitAsync" method="post">
             <DataAnnotationsValidator/>
             <FluentValidationSummary class="text-danger" role="alert"/>
-            @if (isEmailConfirmed)
-            {
-                <FluentTextField Value="@email" Placeholder="Please enter your email." Disabled Label="Email" Appearance=FluentInputAppearance.Filled Style="width: 100%">
-                    <span slot="end">✓</span>
-                </FluentTextField>
-            }
-            else
-            {
-                <FluentTextField value="@email" Placeholder="Please enter your email." Disabled Label="Email" Appearance=FluentInputAppearance.Filled Style="width: 100%"/>
-                <FluentButton Type="ButtonType.Submit" Appearance="Appearance.Accent" Form="send-verification-form" Style="width: 100%">Send verification email</FluentButton>
-            }
-            <FluentTextField Name="Input.NewEmail" @bind-Value="Input.NewEmail" AutoComplete="email" Required="true" Placeholder="Please enter new email." Label="New email" Style="width: 100%"/>
-            <FluentValidationMessage For="() => Input.NewEmail" class="text-danger"/>
-            <FluentButton Type="ButtonType.Submit" Appearance="Appearance.Accent" Style="width: 100%;">Change email</FluentButton>
+            <FluentStack Orientation="Orientation.Vertical">
+                @if (isEmailConfirmed)
+                {
+                    <FluentField Label="Email">
+                        <FluentTextInput Value="@email" Placeholder="Please enter your email." Disabled="true" Appearance=TextInputAppearance.Outline Style="width: 100%">
+                            <span slot="end">✓</span>
+                        </FluentTextInput>
+                    </FluentField>
+                }
+                else
+                {
+                    <FluentField Label="Email">
+                        <FluentTextInput value="@email" Placeholder="Please enter your email." Disabled="true" Appearance=TextInputAppearance.Outline Style="width: 100%"/>
+                    </FluentField>
+                    <FluentButton Type="ButtonType.Submit" Appearance="ButtonAppearance.Primary" Form="send-verification-form" Style="width: 100%">Send verification email</FluentButton>
+                }
+                <FluentField Label="New email" Required="true" ValidationFor="@(() => Input.NewEmail)">
+                    <FluentTextInput Name="Input.NewEmail" @bind-Value="Input.NewEmail" AutoComplete="email" Placeholder="Please enter new email." Style="width: 100%"/>
+                </FluentField>
+                <FluentButton Type="ButtonType.Submit" Appearance="ButtonAppearance.Primary" Style="width: 100%;">Change email</FluentButton>
+            </FluentStack>
         </EditForm>
     </FluentGridItem>
 </FluentGrid>

@@ -34,6 +34,7 @@
         <ListBox Name="PageSelection"
                  DockPanel.Dock="Bottom"
                  HorizontalAlignment="Stretch"
+                 SelectionChanged="PageSelection_OnSelectionChanged"
                 >
             <ListBox.ItemsPanel>
                 <ItemsPanelTemplate>
@@ -63,9 +64,15 @@
                 </ListBoxItem>
             </ListBox.Items>
         </ListBox>
-        <fa:FAFrame
-            Name="NavFrame"
-        >
-        </fa:FAFrame>
+        <Border HorizontalAlignment="Stretch"
+                Padding="4"
+                >
+            
+            <fa:FAFrame
+                Name="NavFrame"
+                HorizontalAlignment="Center"
+            >
+            </fa:FAFrame>
+        </Border>
     </DockPanel>
 </UserControl>

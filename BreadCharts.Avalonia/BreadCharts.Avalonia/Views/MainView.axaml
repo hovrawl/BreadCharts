@@ -13,5 +13,5 @@
     <vm:MainViewModel />
   </Design.DataContext>
 
-    <controls:AppNavigation />
+    <controls:AppNavigation  />
 </UserControl>

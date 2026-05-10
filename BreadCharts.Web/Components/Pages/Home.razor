@@ -11,7 +11,7 @@
 @inject ISpotifyClientService SpotifyClientService;
 @inject UserManager<ApplicationUser> UserManager;
 @inject IHttpContextAccessor HttpContextAccessor;
-@inject Services.IVotingService VotingService;
+@inject IVotingService VotingService;
 @inject Microsoft.Extensions.Options.IOptions<Services.VotingOptions> VotingOptionsAccessor;
 
 <PageTitle>Home</PageTitle>
@@ -104,7 +104,7 @@
     
     string username;
     string? currentUserId;
-    List<BreadCharts.Web.Services.SubmittedSongView>? Submissions;
+    List<SubmittedSongView>? Submissions;
     int MaxVotesPerUser => VotingOptionsAccessor.Value?.MaxVotesPerUser ?? 10;
     int CurrentVotes => Submissions?.Count(s => s.HasVoted) ?? 0;
     bool DisableVoteButton => CurrentVotes >= MaxVotesPerUser;

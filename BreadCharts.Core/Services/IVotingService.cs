@@ -1,6 +1,4 @@
-using BreadCharts.Web.Data;
-
-namespace BreadCharts.Web.Services;
+namespace BreadCharts.Core.Services;
 
 public record SubmittedSongView(string TrackId, string TrackName, string SubmittedByUserId, int VoteCount, bool HasVoted);
 

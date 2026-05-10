@@ -1,0 +1,70 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             xmlns:fa="clr-namespace:FluentAvalonia.UI.Controls;assembly=FluentAvalonia"
+             xmlns:views="clr-namespace:BreadCharts.Avalonia.Views"
+             mc:Ignorable="d" d:DesignWidth="800" d:DesignHeight="450"
+             x:Class="BreadCharts.Avalonia.Controls.AppNavigation">
+    <UserControl.Styles>
+        <Style Selector="ListBoxItem.commandItem">
+            <Style Selector="^ StackPanel">
+                <Setter Property="HorizontalAlignment" Value="Center"></Setter>
+            </Style>
+            <!-- <Style Selector="^ fa|FASymbolIconSource"> -->
+            <!--     <Setter Property="FontSize" Value="20"></Setter> -->
+            <!-- </Style> -->
+            <Style Selector="^ TextBlock">
+                <Setter Property="FontSize" Value="10"></Setter>
+            </Style>
+            <Style Selector="^ Rectangle#SelectionIndicator">
+                <Setter Property="Margin" Value="0,0,0, 1"></Setter>
+                <Setter Property="Height" Value="3"></Setter>
+                <Setter Property="Width" Value="16"></Setter>
+                <Setter Property="HorizontalAlignment" Value="Center"></Setter>
+                <Setter Property="VerticalAlignment" Value="Bottom"></Setter>
+
+            </Style>
+        </Style>
+    </UserControl.Styles>
+    <DockPanel >
+        
+        <ListBox Name="PageSelection"
+                 DockPanel.Dock="Bottom"
+                 HorizontalAlignment="Stretch"
+                 SelectionChanged="PageSelection_OnSelectionChanged"
+                >
+            <ListBox.ItemsPanel>
+                <ItemsPanelTemplate>
+                    <UniformGrid Rows="1" />
+                </ItemsPanelTemplate>
+            </ListBox.ItemsPanel>
+            <ListBox.DataTemplates>
+            </ListBox.DataTemplates>
+            <ListBox.Items>
+                <ListBoxItem Name="Home" Classes="commandItem">
+                    <StackPanel>
+                        <fa:FASymbolIcon Symbol="Home" FontSize="20"></fa:FASymbolIcon>
+                        <TextBlock>Home</TextBlock>
+                    </StackPanel>
+                </ListBoxItem>
+                <ListBoxItem Name="Search" Classes="commandItem">
+                    <StackPanel>
+                        <fa:FASymbolIcon Symbol="Find" FontSize="20"></fa:FASymbolIcon>
+                        <TextBlock>Search</TextBlock>
+                    </StackPanel>                  
+                </ListBoxItem>
+                <ListBoxItem Name="Profile" Classes="commandItem">
+                    <StackPanel>
+                        <fa:FASymbolIcon Symbol="People" FontSize="20"></fa:FASymbolIcon>
+                        <TextBlock>Profile</TextBlock>
+                    </StackPanel>          
+                </ListBoxItem>
+            </ListBox.Items>
+        </ListBox>
+        <fa:FAFrame
+            Name="NavFrame"
+        >
+        </fa:FAFrame>
+    </DockPanel>
+</UserControl>

@@ -1,0 +1,11 @@
+﻿<Solution>
+  <Project Path="BreadCharts.Avalonia.Android/BreadCharts.Avalonia.Android.csproj">
+    <Deploy />
+  </Project>
+  <Project Path="BreadCharts.Avalonia.Browser/BreadCharts.Avalonia.Browser.csproj" />
+  <Project Path="BreadCharts.Avalonia.Desktop/BreadCharts.Avalonia.Desktop.csproj" />
+  <Project Path="BreadCharts.Avalonia.iOS/BreadCharts.Avalonia.iOS.csproj">
+    <Deploy />
+  </Project>
+  <Project Path="BreadCharts.Avalonia/BreadCharts.Avalonia.csproj" />
+</Solution>

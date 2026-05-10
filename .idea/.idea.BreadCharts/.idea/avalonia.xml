@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project version="4">
+  <component name="AvaloniaProject">
+    <option name="projectPerEditor">
+      <map>
+        <entry key="BreadCharts.Avalonia/BreadCharts.Avalonia/App.axaml" value="BreadCharts.Avalonia/BreadCharts.Avalonia.Desktop/BreadCharts.Avalonia.Desktop.csproj" />
+        <entry key="BreadCharts.Avalonia/BreadCharts.Avalonia/Controls/AppNavigation.axaml" value="BreadCharts.Avalonia/BreadCharts.Avalonia.Desktop/BreadCharts.Avalonia.Desktop.csproj" />
+        <entry key="BreadCharts.Avalonia/BreadCharts.Avalonia/Views/HomeView.axaml" value="BreadCharts.Avalonia/BreadCharts.Avalonia.Desktop/BreadCharts.Avalonia.Desktop.csproj" />
+        <entry key="BreadCharts.Avalonia/BreadCharts.Avalonia/Views/MainView.axaml" value="BreadCharts.Avalonia/BreadCharts.Avalonia.Desktop/BreadCharts.Avalonia.Desktop.csproj" />
+        <entry key="BreadCharts.Avalonia/BreadCharts.Avalonia/Views/MainWindow.axaml" value="BreadCharts.Avalonia/BreadCharts.Avalonia.Desktop/BreadCharts.Avalonia.Desktop.csproj" />
+        <entry key="BreadCharts.Avalonia/BreadCharts.Avalonia/Views/ProfileView.axaml" value="BreadCharts.Avalonia/BreadCharts.Avalonia.Desktop/BreadCharts.Avalonia.Desktop.csproj" />
+        <entry key="BreadCharts.Avalonia/BreadCharts.Avalonia/Views/SearchView.axaml" value="BreadCharts.Avalonia/BreadCharts.Avalonia.Desktop/BreadCharts.Avalonia.Desktop.csproj" />
+      </map>
+    </option>
+  </component>
+</project>

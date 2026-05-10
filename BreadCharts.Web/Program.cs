@@ -19,7 +19,7 @@ builder.Services.AddRazorComponents()
 builder.Services.AddFluentUIComponents();
 builder.Services.AddSingleton<ISpotifyClientService, SpotifyClientService>();
 builder.Services.AddScoped<IChartService, ChartService>();
-builder.Services.AddScoped<BreadCharts.Web.Services.IVotingService, BreadCharts.Web.Services.VotingService>();
+builder.Services.AddScoped<IVotingService, BreadCharts.Web.Services.VotingService>();
 builder.Services.AddOptions<BreadCharts.Web.Services.VotingOptions>()
     .Bind(builder.Configuration.GetSection("Voting"))
     .PostConfigure(opt => { if (opt.MaxVotesPerUser <= 0) opt.MaxVotesPerUser = 10; });

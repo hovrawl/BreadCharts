@@ -24,8 +24,5 @@ public partial class AppNavigation : UserControl
     //     
     //     PageSelection.ItemsSource = NavigationItems;
     // }
-    private void PageSelection_OnSelectionChanged(object? sender, SelectionChangedEventArgs e)
-    {
-        // Calc width
-    }
+
 }

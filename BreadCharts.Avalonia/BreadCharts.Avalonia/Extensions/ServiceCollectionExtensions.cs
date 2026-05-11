@@ -1,3 +1,5 @@
+using System;
+using System.Net.Http;
 using BreadCharts.Avalonia.Services;
 using BreadCharts.Avalonia.ViewModels;
 using Microsoft.Extensions.DependencyInjection;
@@ -8,6 +10,8 @@ public static class ServiceCollectionExtensions
 {
     public static void AddCommonServices(this IServiceCollection collection)
     {
+        collection.AddSingleton<HttpClient>(new HttpClient { BaseAddress = new Uri("http://localhost:5206") });
+        collection.AddSingleton<ApiClient>();
         collection.AddSingleton<AuthService>();
         collection.AddSingleton<SpotifyService>();
         collection.AddSingleton<NavigationFactory>();

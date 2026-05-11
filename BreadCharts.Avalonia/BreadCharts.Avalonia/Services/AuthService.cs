@@ -3,82 +3,62 @@ using System.Collections.Generic;
 using System.Threading.Tasks;
 using BreadCharts.Core.Models;
 using SpotifyAPI.Web;
-using SpotifyAPI.Web.Auth;
 
 namespace BreadCharts.Avalonia.Services;
 
 public class AuthService
 {
-    private static EmbedIOAuthServer _server;
+    private const string ApiBaseUrl = "http://localhost:5206"; // TODO: Make dynamic
+    private const string RedirectUri = "http://localhost:5543/callback";
 
-    private const string _clientId = "7412007f28e045bf90c021c079e92655";
-    private const string _clientSecret = "29b610aae47944668afc79084a856f0b";
-    private const string _redirectUri = "http://127.0.0.1:5543/callback";
-
-    private TaskCompletionSource<AuthorizationCodeTokenResponse>? _tcs;
+    private TaskCompletionSource<AuthResult>? _tcs;
 
     public AuthService()
     {
-        // Make sure _redirectUri is in your spotify application as redirect uri!
-        _server = new EmbedIOAuthServer(new Uri(_redirectUri), 5543);
     }
 
-    public async Task<AuthSession> BeginAuth()
+    public Task<AuthSession> BeginAuth()
     {
-        // Reset or initialize the TaskCompletionSource
-        _tcs = new TaskCompletionSource<AuthorizationCodeTokenResponse>();
+        _tcs = new TaskCompletionSource<AuthResult>();
 
-        await _server.Start();
+        var authUrl = $"{ApiBaseUrl}/auth/spotify?redirectUrl={Uri.EscapeDataString(RedirectUri)}";
 
-        // Attach events
-        _server.AuthorizationCodeReceived += OnAuthorizationCodeReceived;
-        _server.ErrorReceived += OnErrorReceived;
-
-        var request = new LoginRequest(_server.BaseUri, _clientId, LoginRequest.ResponseType.Code)
+        return Task.FromResult(new AuthSession
         {
-            Scope = new List<string> { Scopes.UserReadEmail }
-        };
-
-        // Return uri to open in a web view
-        // BrowserUtil.Open();
-
-        return new AuthSession
-        {
-            RedirectUri = request.ToUri(),
+            RedirectUri = new Uri(authUrl),
             TokenTask = _tcs.Task
-        };
+        });
     }
 
-    private async Task OnAuthorizationCodeReceived(object sender, AuthorizationCodeResponse response)
+    public void HandleCallback(Uri uri)
     {
-        await _server.Stop();
+        var query = System.Web.HttpUtility.ParseQueryString(uri.Query);
+        var appToken = query["appToken"];
+        var spotifyAccessToken = query["spotifyAccessToken"];
+        var spotifyRefreshToken = query["spotifyRefreshToken"];
+        var expiresInStr = query["expiresIn"];
 
-        var config = SpotifyClientConfig.CreateDefault();
-        var tokenResponse = await new OAuthClient(config).RequestToken(
-            new AuthorizationCodeTokenRequest(
-                _clientId, _clientSecret, response.Code, new Uri(_redirectUri)
-            )
-        );
-
-        // Detach event
-        _server.AuthorizationCodeReceived -= OnAuthorizationCodeReceived;
-
-        _tcs?.TrySetResult(tokenResponse);
+        if (!string.IsNullOrEmpty(appToken) && !string.IsNullOrEmpty(spotifyAccessToken))
+        {
+            int.TryParse(expiresInStr, out var expiresIn);
+            _tcs?.TrySetResult(new AuthResult
+            {
+                AppToken = appToken,
+                SpotifyToken = new AuthorizationCodeTokenResponse
+                {
+                    AccessToken = spotifyAccessToken,
+                    RefreshToken = spotifyRefreshToken,
+                    ExpiresIn = expiresIn,
+                    TokenType = "Bearer"
+                }
+            });
+        }
+        else
+        {
+            _tcs?.TrySetException(new Exception("Auth failed: Missing tokens in callback"));
+        }
     }
 
-
-    private async Task OnErrorReceived(object sender, string error, string? state)
-    {
-        await _server.Stop();
-        _server.ErrorReceived -= OnErrorReceived;
-        _tcs?.TrySetException(new Exception($"Auth failed: {error}"));
-    }
-
-    /// <summary>
-    /// Initialize user profile by getting user profile from Spotify API
-    /// </summary>
-    /// <param name="tokenResponse"></param>
-    /// <returns></returns>
     public async Task<UserProfile> InitUser(AuthorizationCodeTokenResponse tokenResponse)
     {
         if (tokenResponse == null)
@@ -97,8 +77,14 @@ public class AuthService
     }
 }
 
+public class AuthResult
+{
+    public string AppToken { get; set; } = "";
+    public AuthorizationCodeTokenResponse SpotifyToken { get; set; } = null!;
+}
+
 public class AuthSession
 {
     public Uri RedirectUri { get; init; }
-    public Task<AuthorizationCodeTokenResponse> TokenTask { get; init; }
+    public Task<AuthResult> TokenTask { get; init; }
 }

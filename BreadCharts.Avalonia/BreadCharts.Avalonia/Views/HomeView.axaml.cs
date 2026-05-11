@@ -32,26 +32,15 @@ public partial class HomeView : UserControl
         try 
         {
             // 3. Cleanly await the result!
-            var tokenResponse = await session.TokenTask;
+            var authResult = await session.TokenTask;
         
-            // Proceed with the token (e.g., Navigate to profile)
-            OnAuthSuccess(tokenResponse);
+            // Proceed with the token
+            await viewModel.HandleAuthResult(authResult);
+            viewModel.NavService.Navigate(ViewName);
         }
         catch (Exception ex)
         {
             // Handle login failure or cancellation
         }
-    }
-
-    private async Task OnAuthSuccess(AuthorizationCodeTokenResponse tokenResponse)
-    {
-        // This is where we take user token, create spotify client,
-        // setup a user and navigate back to home
-        if (DataContext is not MainViewModel viewModel) return;
-        
-        // Give user token to VM to handle
-        await viewModel.HandleUserToken(tokenResponse);
-        // Navigate back to home
-        viewModel.NavService.Navigate(ViewName);
     }
 }

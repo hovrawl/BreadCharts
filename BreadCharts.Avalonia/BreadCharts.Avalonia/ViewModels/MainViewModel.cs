@@ -11,23 +11,26 @@ public partial class MainViewModel : ViewModelBase
     private AuthService _authService;
     private NavigationService _navService;
     private SpotifyService _spotifyService;
+    private ApiClient _apiClient;
     
     public AuthService AuthService => _authService;
     public NavigationService NavService => _navService;
     public SpotifyService SpotifyService => _spotifyService;
+    public ApiClient ApiClient => _apiClient;
     
-    public MainViewModel(AuthService authService, NavigationService navService, SpotifyService spotifyService)
+    public MainViewModel(AuthService authService, NavigationService navService, SpotifyService spotifyService, ApiClient apiClient)
     {
         _authService = authService;
         _navService = navService;
         _spotifyService = spotifyService;
+        _apiClient = apiClient;
     }
 
-    public async Task HandleUserToken(AuthorizationCodeTokenResponse token)
+    public async Task HandleAuthResult(AuthResult result)
     {
-        var userProfile = await _authService.InitUser(token);
-        // Set user profile
+        _apiClient.SetAppToken(result.AppToken);
+        var userProfile = await _authService.InitUser(result.SpotifyToken);
         CurrentUser = userProfile;
-        //_spotifyService.GetClient(userProfile.Id, token.AccessToken, token.RefreshToken);
+        // Navigation and other setup
     }
 }

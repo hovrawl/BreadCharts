@@ -25,7 +25,6 @@
     <PackageReference Include="Microsoft.Extensions.DependencyInjection.Abstractions" />
     <PackageReference Include="Microsoft.Extensions.Logging.Abstractions" />
     <PackageReference Include="SpotifyAPI.Web" />
-    <PackageReference Include="SpotifyAPI.Web.Auth" />
   </ItemGroup>
 
   <ItemGroup>

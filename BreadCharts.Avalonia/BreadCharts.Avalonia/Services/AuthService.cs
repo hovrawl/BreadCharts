@@ -19,7 +19,7 @@ public class AuthService
 
     public AuthService()
     {
-        // Make sure "http://127.0.0.1:5543/callback" is in your spotify application as redirect uri!
+        // Make sure _redirectUri is in your spotify application as redirect uri!
         _server = new EmbedIOAuthServer(new Uri(_redirectUri), 5543);
     }
 

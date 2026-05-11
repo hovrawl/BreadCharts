@@ -8,8 +8,8 @@ namespace BreadCharts.Avalonia.Services;
 
 public class AuthService
 {
-    private const string ApiBaseUrl = "http://localhost:5206"; // TODO: Make dynamic
-    private const string RedirectUri = "http://localhost:5543/callback";
+    private const string ApiBaseUrl = "http://127.0.0.1:5206"; // TODO: Make dynamic
+    private const string RedirectUri = "http://127.0.0.1:5543/auth/callback";
 
     private TaskCompletionSource<AuthResult>? _tcs;
 

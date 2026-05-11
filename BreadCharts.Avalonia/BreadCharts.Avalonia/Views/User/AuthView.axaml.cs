@@ -28,7 +28,7 @@ public partial class AuthView : UserControl
     // This is a placeholder. In a real scenario, you'd use the specific event for the WebView control.
     private void HandleUrlChange(string? url)
     {
-        if (url?.Contains("http://localhost:5543/callback") == true)
+        if (url?.Contains("http://127.0.0.1:5543/callback") == true)
         {
             if (DataContext is AuthViewModel viewModel)
             {

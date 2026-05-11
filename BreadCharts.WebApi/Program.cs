@@ -3,6 +3,8 @@ using System.Text;
 using BreadCharts.Core.Infrastructure;
 using BreadCharts.Core.Models;
 using BreadCharts.Core.Services;
+using BreadCharts.WebApi;
+using BreadCharts.WebApi.CompiledModels;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Identity;
@@ -10,14 +12,26 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 
-var builder = WebApplication.CreateBuilder(args);
+using Microsoft.Data.Sqlite;
+
+var builder = WebApplication.CreateSlimBuilder(args);
+builder.WebHost.UseKestrelHttpsConfiguration();
+
+builder.Services.ConfigureHttpJsonOptions(options =>
+{
+    options.SerializerOptions.TypeInfoResolverChain.Insert(0, AppJsonContext.Default);
+});
 
 // 1. Configure Services
 builder.Services.AddOpenApi();
 
 // DB and Identity
 var connectionString = builder.Configuration.GetConnectionString("DefaultConnection") ?? "Data Source=app.db";
-builder.Services.AddDbContext<ApplicationDbContext>(options => options.UseSqlite(connectionString));
+builder.Services.AddDbContext<ApplicationDbContext>(options =>
+{
+    options.UseSqlite(connectionString);
+    options.UseModel(ApplicationDbContextModel.Instance);
+});
 
 builder.Services.AddIdentityCore<ApplicationUser>()
     .AddEntityFrameworkStores<ApplicationDbContext>()
@@ -83,9 +97,86 @@ var app = builder.Build();
 if (app.Environment.IsDevelopment())
 {
     app.MapOpenApi();
-    using var scope = app.Services.CreateScope();
+}
+
+using (var scope = app.Services.CreateScope())
+{
     var db = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
-    db.Database.EnsureCreated();
+    var sqliteConnection = new SqliteConnectionStringBuilder(connectionString);
+    var dbPath = sqliteConnection.DataSource;
+
+    // For SQLite, EnsureCreated fails in NativeAOT due to design-time model building.
+    // We use a manual check and creation for AOT compatibility.
+    // Only attempt manual creation if it looks like a local file path.
+    if (!string.IsNullOrEmpty(dbPath) && dbPath != ":memory:")
+    {
+        bool exists = File.Exists(dbPath);
+        if (!exists)
+        {
+            var dir = Path.GetDirectoryName(dbPath);
+            if (!string.IsNullOrEmpty(dir)) Directory.CreateDirectory(dir);
+            
+            db.Database.OpenConnection();
+            try
+            {
+                var command = db.Database.GetDbConnection().CreateCommand();
+                command.CommandText = @"
+                    CREATE TABLE IF NOT EXISTS ""AspNetUsers"" (
+                        ""Id"" TEXT NOT NULL PRIMARY KEY,
+                        ""UserName"" TEXT NULL,
+                        ""NormalizedUserName"" TEXT NULL,
+                        ""Email"" TEXT NULL,
+                        ""NormalizedEmail"" TEXT NULL,
+                        ""EmailConfirmed"" INTEGER NOT NULL,
+                        ""PasswordHash"" TEXT NULL,
+                        ""SecurityStamp"" TEXT NULL,
+                        ""ConcurrencyStamp"" TEXT NULL,
+                        ""PhoneNumber"" TEXT NULL,
+                        ""PhoneNumberConfirmed"" INTEGER NOT NULL,
+                        ""TwoFactorEnabled"" INTEGER NOT NULL,
+                        ""LockoutEnd"" TEXT NULL,
+                        ""LockoutEnabled"" INTEGER NOT NULL,
+                        ""AccessFailedCount"" INTEGER NOT NULL,
+                        ""ThirdPartyId"" TEXT NULL,
+                        ""AccessToken"" TEXT NULL,
+                        ""RefreshToken"" TEXT NULL
+                    );
+                    CREATE TABLE IF NOT EXISTS ""SubmittedSongs"" (
+                        ""Id"" TEXT NOT NULL PRIMARY KEY,
+                        ""SpotifyId"" TEXT NOT NULL,
+                        ""Title"" TEXT NOT NULL,
+                        ""Artist"" TEXT NOT NULL,
+                        ""Album"" TEXT NOT NULL,
+                        ""ImageUrl"" TEXT NOT NULL,
+                        ""SubmittedById"" TEXT NOT NULL,
+                        ""SubmittedAt"" TEXT NOT NULL,
+                        CONSTRAINT ""FK_SubmittedSongs_AspNetUsers_SubmittedById"" FOREIGN KEY (""SubmittedById"") REFERENCES ""AspNetUsers"" (""Id"") ON DELETE CASCADE
+                    );
+                    CREATE TABLE IF NOT EXISTS ""SongVotes"" (
+                        ""Id"" INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,
+                        ""SongId"" TEXT NOT NULL,
+                        ""UserId"" TEXT NOT NULL,
+                        ""VotedAt"" TEXT NOT NULL,
+                        CONSTRAINT ""FK_SongVotes_AspNetUsers_UserId"" FOREIGN KEY (""UserId"") REFERENCES ""AspNetUsers"" (""Id"") ON DELETE CASCADE,
+                        CONSTRAINT ""FK_SongVotes_SubmittedSongs_SongId"" FOREIGN KEY (""SongId"") REFERENCES ""SubmittedSongs"" (""Id"") ON DELETE CASCADE
+                    );
+                    CREATE INDEX IF NOT EXISTS ""IX_SongVotes_SongId"" ON ""SongVotes"" (""SongId"");
+                    CREATE INDEX IF NOT EXISTS ""IX_SongVotes_UserId"" ON ""SongVotes"" (""UserId"");
+                    CREATE INDEX IF NOT EXISTS ""IX_SubmittedSongs_SubmittedById"" ON ""SubmittedSongs"" (""SubmittedById"");
+                ";
+                command.ExecuteNonQuery();
+            }
+            finally
+            {
+                db.Database.CloseConnection();
+            }
+        }
+    }
+    else
+    {
+        // Fallback for in-memory or other cases, though EnsureCreated might still fail in AOT
+        db.Database.EnsureCreated();
+    }
 }
 
 app.UseAuthentication();
@@ -158,15 +249,26 @@ app.MapGet("/auth/finalize", async (
     var jwt = tokenHandler.WriteToken(token);
 
     // Return all tokens to the app
-    // In a real scenario, you might want to redirect back to the app with these in the fragment or a secure way
-    // For now, we return JSON. The Avalonia app can capture this if it uses a web view or we can use a redirect with params.
-    return Results.Ok(new
+    var redirectUrl = result.Properties?.Items["redirectUrl"];
+    if (!string.IsNullOrEmpty(redirectUrl))
+    {
+        var builder = new UriBuilder(redirectUrl);
+        var query = System.Web.HttpUtility.ParseQueryString(builder.Query);
+        query["appToken"] = jwt;
+        query["spotifyAccessToken"] = accessToken;
+        query["spotifyRefreshToken"] = refreshToken;
+        query["expiresIn"] = result.Properties?.GetTokenValue("expires_at");
+        builder.Query = query.ToString();
+        return Results.Redirect(builder.ToString());
+    }
+
+    return Results.Ok(new AuthResponse
     {
         AppToken = jwt,
         SpotifyAccessToken = accessToken,
         SpotifyRefreshToken = refreshToken,
         ExpiresIn = result.Properties?.GetTokenValue("expires_at"),
-        User = new { user.Id, user.DisplayName, user.Email }
+        User = new UserSummary { Id = user.Id, DisplayName = user.DisplayName, Email = user.Email }
     });
 });
 

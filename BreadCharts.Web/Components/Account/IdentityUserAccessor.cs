@@ -1,5 +1,5 @@
 using Microsoft.AspNetCore.Identity;
-using BreadCharts.Web.Data;
+using BreadCharts.Core.Models;
 
 namespace BreadCharts.Web.Components.Account;
 

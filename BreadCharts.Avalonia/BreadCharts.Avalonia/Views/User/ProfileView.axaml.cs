@@ -1,11 +1,11 @@
-using Avalonia;
 using Avalonia.Controls;
-using Avalonia.Markup.Xaml;
 
-namespace BreadCharts.Avalonia.Views;
+namespace BreadCharts.Avalonia.Views.User;
 
 public partial class ProfileView : UserControl
 {
+    public const string ViewName = "Profile";
+    
     public ProfileView()
     {
         InitializeComponent();

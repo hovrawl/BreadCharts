@@ -7,10 +7,11 @@
              x:DataType="viewModels:MainViewModel"
              x:Class="BreadCharts.Avalonia.Views.HomeView">
     <StackPanel
->
+        VerticalAlignment="Center">
         <!-- Show only when user is NOT logged in -->
         <Button Content="Sign In with Spotify" 
-                IsVisible="{CompiledBinding CurrentUser, Converter={x:Static ObjectConverters.IsNull}}" />
+                IsVisible="{CompiledBinding CurrentUser, Converter={x:Static ObjectConverters.IsNull}}" 
+                Click="AuthBtn_Click"/>
         <!-- Show only when user IS logged in -->
         <TextBlock Text="{CompiledBinding CurrentUser.Name}" 
                    IsVisible="{CompiledBinding CurrentUser, Converter={x:Static ObjectConverters.IsNotNull}}" />

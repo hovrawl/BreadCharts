@@ -10,6 +10,7 @@
         <entry key="BreadCharts.Avalonia/BreadCharts.Avalonia/Views/MainWindow.axaml" value="BreadCharts.Avalonia/BreadCharts.Avalonia.Desktop/BreadCharts.Avalonia.Desktop.csproj" />
         <entry key="BreadCharts.Avalonia/BreadCharts.Avalonia/Views/ProfileView.axaml" value="BreadCharts.Avalonia/BreadCharts.Avalonia.Desktop/BreadCharts.Avalonia.Desktop.csproj" />
         <entry key="BreadCharts.Avalonia/BreadCharts.Avalonia/Views/SearchView.axaml" value="BreadCharts.Avalonia/BreadCharts.Avalonia.Desktop/BreadCharts.Avalonia.Desktop.csproj" />
+        <entry key="BreadCharts.Avalonia/BreadCharts.Avalonia/Views/User/AuthView.axaml" value="BreadCharts.Avalonia/BreadCharts.Avalonia.Desktop/BreadCharts.Avalonia.Desktop.csproj" />
       </map>
     </option>
   </component>

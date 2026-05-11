@@ -6,7 +6,18 @@
              mc:Ignorable="d" d:DesignWidth="800" d:DesignHeight="450"
              x:DataType="viewModels:AuthViewModel"
              x:Class="BreadCharts.Avalonia.Views.User.AuthView">
-    <NativeWebView 
-        Name="AuthWebView"
-        ></NativeWebView>
+    <Grid>
+        <NativeWebView 
+            IsVisible="True"
+            Name="AuthWebView"
+            ></NativeWebView>
+        <StackPanel IsVisible="False" VerticalAlignment="Center" HorizontalAlignment="Center" Spacing="20" Name="BrowserAuthPanel">
+            <TextBlock Text="Spotify Login Required" FontSize="24" FontWeight="Bold" HorizontalAlignment="Center"/>
+            <TextBlock Text="Authentication must be completed in a new tab for security reasons." HorizontalAlignment="Center" TextWrapping="Wrap" MaxWidth="400" TextAlignment="Center"/>
+            <Button Content="Login with Spotify" 
+                    Command="{Binding OpenAuthCommand}" 
+                    Padding="20,10"
+                    HorizontalAlignment="Center"/>
+        </StackPanel>
+    </Grid>
 </UserControl>

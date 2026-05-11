@@ -10,14 +10,16 @@ namespace BreadCharts.Avalonia.Services;
 
 public class NavigationService
 {
+    private readonly AuthService _authService;
     private readonly NavigationFactory _navigationFactory;
     private readonly IServiceProvider _serviceProvider;
     private FAFrame _frame;
     
-    public NavigationService(NavigationFactory navigationFactory, IServiceProvider serviceProvider)
+    public NavigationService(NavigationFactory navigationFactory, IServiceProvider serviceProvider, AuthService authService)
     {
         _navigationFactory = navigationFactory;
         _serviceProvider = serviceProvider;
+        _authService = authService;
     }
     
     public void SetFrame(FAFrame frame)
@@ -48,9 +50,17 @@ public class NavigationService
         {
             throw new InvalidOperationException("Frame not set. Call SetFrame before navigating.");
         }
-        
-        
-        Navigate(AuthView.ViewName, uri.ToString());
+
+        if (_authService.IsBrowser)
+        {
+            // For Browser, we can either navigate to AuthView which has a login button,
+            // or we could redirect directly. Direct redirect is more seamless.
+            _authService.OpenUrl(uri);
+        }
+        else
+        {
+            Navigate(AuthView.ViewName, uri.ToString());
+        }
     }
 
     public void Navigate(string tag, string? data = "")

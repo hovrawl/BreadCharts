@@ -14,14 +14,16 @@ public partial class AuthView : UserControl
     {
         InitializeComponent();
         
-        // Find the NativeWebView by name. We use dynamic/object to avoid missing type issues 
-        // if the exact package version isn't known, but usually it has a Url property or similar.
-        var webView = this.FindControl<Control>("AuthWebView");
-        if (webView != null)
+        if (Design.IsDesignMode) return;
+
+        // Use a slight delay to ensure DataContext is set if needed, or just check platform
+        if (OperatingSystem.IsBrowser())
         {
-            // Try to hook into navigation events if available on this specific WebView implementation
-            // Since we don't have the exact type here, we use a generic approach or assume standard WebView behavior.
-            // For now, we'll try to use the dynamic approach if we can't find the exact type.
+            var webView = this.FindControl<Control>("AuthWebView");
+            if (webView != null) webView.IsVisible = false;
+            
+            var browserPanel = this.FindControl<Control>("BrowserAuthPanel");
+            if (browserPanel != null) browserPanel.IsVisible = true;
         }
     }
 

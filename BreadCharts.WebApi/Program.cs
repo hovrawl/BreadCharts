@@ -65,8 +65,39 @@ builder.Services.AddAuthentication(options =>
     {
         options.ClientId = builder.Configuration["Spotify:ClientId"] ?? string.Empty;
         options.ClientSecret = builder.Configuration["Spotify:ClientSecret"] ?? string.Empty;
-        options.CallbackPath = "/auth/callback";
+        
+        // Use configured RedirectUri if available, otherwise fallback to default CallbackPath behavior
+        // The CallbackPath is where Spotify redirects the USER'S BROWSER back to OUR SERVER.
+        // It must match one of the Redirect URIs registered in the Spotify Developer Dashboard.
+        var configuredRedirectUri = builder.Configuration["Auth:RedirectUri"];
+        if (!string.IsNullOrEmpty(configuredRedirectUri))
+        {
+            options.CallbackPath = new PathString(new Uri(configuredRedirectUri).AbsolutePath);
+        }
+        else
+        {
+            // Default callback path for the API, distinct from the Web app
+            options.CallbackPath = "/auth/callback";
+        }
+        
         options.SaveTokens = true;
+
+        options.Events.OnRemoteFailure = context =>
+        {
+            var logger = context.HttpContext.RequestServices.GetRequiredService<ILogger<Program>>();
+            logger.LogError(context.Failure, "Remote failure during authentication: {Message}", context.Failure?.Message);
+            
+            if (context.Failure is AuthenticationFailureException authFailure && context.Request.Query.ContainsKey("error"))
+            {
+                logger.LogError("Spotify error: {Error}, Description: {Description}", 
+                    context.Request.Query["error"], 
+                    context.Request.Query["error_description"]);
+            }
+
+            context.Response.Redirect("/auth/error?message=" + System.Net.WebUtility.UrlEncode(context.Failure?.Message ?? "Unknown error"));
+            context.HandleResponse();
+            return Task.CompletedTask;
+        };
         
         var scopes = new List<string>
         {
@@ -186,6 +217,7 @@ app.UseCors();
 // 3. Auth Endpoints
 
 // Redirect to Spotify
+// The 'redirectUrl' here is the CLIENT (Avalonia) URL to return to AFTER the API has processed the tokens.
 app.MapGet("/auth/spotify", (string? redirectUrl) =>
 {
     var props = new AuthenticationProperties { RedirectUri = "/auth/finalize" };
@@ -301,6 +333,8 @@ voting.MapDelete("/vote/{trackId}", async (IVotingService svc, ClaimsPrincipal u
     var res = await svc.UnvoteAsync(userId!, trackId);
     return res.ok ? Results.Ok(res.message) : Results.BadRequest(res.message);
 });
+
+app.MapGet("/auth/error", (string? message) => Results.Problem(detail: message, title: "Authentication Error"));
 
 app.Run();
 

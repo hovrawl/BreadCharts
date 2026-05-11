@@ -1,0 +1,28 @@
+@BreadCharts.WebApi_HostAddress = http://localhost:5206
+@AppToken = YOUR_APP_TOKEN_HERE
+
+GET {{BreadCharts.WebApi_HostAddress}}/auth/spotify
+Accept: application/json
+
+### Get Submissions
+GET {{BreadCharts.WebApi_HostAddress}}/api/voting/submissions
+Authorization: Bearer {{AppToken}}
+Accept: application/json
+
+### Submit a Song
+POST {{BreadCharts.WebApi_HostAddress}}/api/voting/submit
+Authorization: Bearer {{AppToken}}
+Content-Type: application/json
+
+{
+  "trackId": "4cOdK2wGqyH7A3sYqZuj9X",
+  "trackName": "Always"
+}
+
+### Vote for a Song
+POST {{BreadCharts.WebApi_HostAddress}}/api/voting/vote/4cOdK2wGqyH7A3sYqZuj9X
+Authorization: Bearer {{AppToken}}
+
+### Unvote
+DELETE {{BreadCharts.WebApi_HostAddress}}/api/voting/vote/4cOdK2wGqyH7A3sYqZuj9X
+Authorization: Bearer {{AppToken}}

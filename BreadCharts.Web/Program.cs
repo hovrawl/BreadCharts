@@ -1,3 +1,5 @@
+using BreadCharts.Core.Infrastructure;
+using BreadCharts.Core.Models;
 using BreadCharts.Core.Services;
 using Microsoft.AspNetCore.Components.Authorization;
 using Microsoft.AspNetCore.Identity;
@@ -5,9 +7,9 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.FluentUI.AspNetCore.Components;
 using BreadCharts.Web.Components;
 using BreadCharts.Web.Components.Account;
-using BreadCharts.Web.Data;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.Extensions.Options;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -19,8 +21,8 @@ builder.Services.AddRazorComponents()
 builder.Services.AddFluentUIComponents();
 builder.Services.AddSingleton<ISpotifyClientService, SpotifyClientService>();
 builder.Services.AddScoped<IChartService, ChartService>();
-builder.Services.AddScoped<IVotingService, BreadCharts.Web.Services.VotingService>();
-builder.Services.AddOptions<BreadCharts.Web.Services.VotingOptions>()
+builder.Services.AddScoped<IVotingService, VotingService>();
+builder.Services.AddOptions<VotingOptions>()
     .Bind(builder.Configuration.GetSection("Voting"))
     .PostConfigure(opt => { if (opt.MaxVotesPerUser <= 0) opt.MaxVotesPerUser = 10; });
 builder.Services.AddHttpContextAccessor();

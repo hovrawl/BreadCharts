@@ -1,9 +1,9 @@
-using BreadCharts.Core.Services;
-using BreadCharts.Web.Data;
+using BreadCharts.Core.Infrastructure;
+using BreadCharts.Core.Models;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
 
-namespace BreadCharts.Web.Services;
+namespace BreadCharts.Core.Services;
 
 public class VotingService(ApplicationDbContext db, IOptions<VotingOptions> options)
     : IVotingService

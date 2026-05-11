@@ -1,6 +1,6 @@
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Identity.UI.Services;
-using BreadCharts.Web.Data;
+using BreadCharts.Core.Models;
 
 namespace BreadCharts.Web.Components.Account;
 

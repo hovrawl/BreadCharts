@@ -7,6 +7,9 @@ using SpotifyAPI.Web;
 
 namespace BreadCharts.Core.Services;
 
+/// <summary>
+/// UNUSED IN AVALONIA
+/// </summary>
 public class SpotifyClientService : ISpotifyClientService
 {
     private readonly string _clientId;

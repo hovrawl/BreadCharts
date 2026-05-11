@@ -1,4 +1,4 @@
-namespace BreadCharts.Web.Services;
+namespace BreadCharts.Core.Models;
 
 public class VotingOptions
 {

@@ -1,7 +1,7 @@
 using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
 
-namespace BreadCharts.Web.Data;
+namespace BreadCharts.Core.Models;
 
 public class SubmittedSong
 {

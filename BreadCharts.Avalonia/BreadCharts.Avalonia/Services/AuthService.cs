@@ -67,7 +67,7 @@ public class AuthService
     }
 
 
-    private async Task OnErrorReceived(object sender, string error, string state)
+    private async Task OnErrorReceived(object sender, string error, string? state)
     {
         await _server.Stop();
         _server.ErrorReceived -= OnErrorReceived;

@@ -26,6 +26,8 @@ public class UserSummary
 [JsonSerializable(typeof(SubmitRequest))]
 [JsonSerializable(typeof(string))]
 [JsonSerializable(typeof(object))]
+[JsonSerializable(typeof(Microsoft.AspNetCore.Mvc.ProblemDetails))]
+[JsonSerializable(typeof(Microsoft.AspNetCore.Mvc.ValidationProblemDetails))]
 internal partial class AppJsonContext : JsonSerializerContext
 {
 }

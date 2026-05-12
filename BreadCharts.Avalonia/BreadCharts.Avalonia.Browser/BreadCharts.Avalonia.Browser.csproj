@@ -6,10 +6,15 @@
     <Nullable>enable</Nullable>
     <BlazorWebAssemblyPreserveCollationData>true</BlazorWebAssemblyPreserveCollationData>
     <WasmBuildNative>true</WasmBuildNative>
+    <DefineConstants>$(DefineConstants);BROWSER</DefineConstants>
   </PropertyGroup>
 
   <ItemGroup>
     <PackageReference Include="Avalonia.Browser" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <None Include="wwwroot\**" CopyToOutputDirectory="PreserveNewest" />
   </ItemGroup>
 
   <ItemGroup>

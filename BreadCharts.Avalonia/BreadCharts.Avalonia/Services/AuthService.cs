@@ -1,12 +1,15 @@
 using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
+#if BROWSER
+using System.Runtime.InteropServices.JavaScript;
+#endif
 using BreadCharts.Core.Models;
 using SpotifyAPI.Web;
 
 namespace BreadCharts.Avalonia.Services;
 
-public class AuthService
+public partial class AuthService
 {
     private const string ApiBaseUrl = "http://127.0.0.1:5206"; // TODO: Make dynamic
     private const string RedirectUri = "http://127.0.0.1:5543/auth/callback";
@@ -87,47 +90,33 @@ public class AuthService
 
     public void OpenUrl(Uri uri)
     {
-        if (IsBrowser)
+#if BROWSER
+        OpenUrlBrowser(uri.ToString());
+#else
+        var psi = new System.Diagnostics.ProcessStartInfo
         {
-            // In Browser, we can use JS to redirect the top window
-            // This is safer than popups which are often blocked
-            OpenUrlBrowser(uri.ToString());
-        }
-        else
-        {
-            // In Desktop/Mobile, use the platform's default browser or Launcher
-            var psi = new System.Diagnostics.ProcessStartInfo
-            {
-                FileName = uri.ToString(),
-                UseShellExecute = true
-            };
-            System.Diagnostics.Process.Start(psi);
-        }
+            FileName = uri.ToString(),
+            UseShellExecute = true
+        };
+        System.Diagnostics.Process.Start(psi);
+#endif
     }
 
     private void OpenUrlBrowser(string url)
     {
-        // Fallback for when we don't have JS Interop set up yet, 
-        // though in Avalonia Browser it should be done via JSHost.
-        // For now, we'll try to use a simple approach if possible, 
-        // but typically you'd want:
-        // System.Runtime.InteropServices.JavaScript.JSHost.Window.Location.Href = url;
-        
-        try 
-        {
-            // This is a common hack for opening URLs in WASM if not using JSImport
-            var psi = new System.Diagnostics.ProcessStartInfo
-            {
-                FileName = url,
-                UseShellExecute = true
-            };
-            System.Diagnostics.Process.Start(psi);
-        }
-        catch 
-        {
-            // If it fails, we might need real JS Interop
-        }
+#if BROWSER
+        _ = OpenUrlBrowserAsync(url);
+#endif
     }
+
+    private async Task OpenUrlBrowserAsync(string url)
+    {
+#if BROWSER
+        await JSHost.ImportAsync("main.js", "../main.js");
+        BrowserInterop.OpenUrl(url);
+#endif
+    }
+
     public async Task<UserProfile> InitUser(AuthorizationCodeTokenResponse tokenResponse)
     {
         if (tokenResponse == null)
@@ -145,6 +134,14 @@ public class AuthService
         return returnProfile;
     }
 }
+
+#if BROWSER
+public partial class BrowserInterop
+{
+    [JSImport("openUrl", "main.js")]
+    public static partial void OpenUrl(string url);
+}
+#endif
 
 public class AuthResult
 {

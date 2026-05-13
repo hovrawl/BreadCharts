@@ -10,6 +10,7 @@
         <NativeWebView 
             IsVisible="True"
             Name="AuthWebView"
+            NavigationCompleted="AuthWebView_OnNavigationCompleted"
             ></NativeWebView>
         <StackPanel IsVisible="False" VerticalAlignment="Center" HorizontalAlignment="Center" Spacing="20" Name="BrowserAuthPanel">
             <TextBlock Text="Spotify Login Required" FontSize="24" FontWeight="Bold" HorizontalAlignment="Center"/>

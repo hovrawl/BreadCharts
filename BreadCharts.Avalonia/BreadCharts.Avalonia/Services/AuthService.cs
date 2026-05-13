@@ -48,8 +48,12 @@ public partial class AuthService
         });
     }
 
-    public void HandleCallback(Uri uri)
+    public void HandleCallback(Uri? uri)
     {
+        if (uri == null) return;
+        if (!uri.ToString().Contains(RedirectUri)) return;
+        
+        
         var result = ParseResult(uri);
         if (result != null)
         {

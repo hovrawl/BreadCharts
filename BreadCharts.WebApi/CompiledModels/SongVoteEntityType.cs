@@ -4,8 +4,13 @@ using System.Collections.Generic;
 using System.Reflection;
 using BreadCharts.Core.Models;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.ChangeTracking;
+using Microsoft.EntityFrameworkCore.ChangeTracking.Internal;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Metadata.Internal;
+using Microsoft.EntityFrameworkCore.Sqlite.Storage.Internal;
+using Microsoft.EntityFrameworkCore.Storage;
 
 #pragma warning disable 219, 612, 618
 #nullable disable
@@ -35,6 +40,48 @@ namespace BreadCharts.WebApi.CompiledModels
                 valueGenerated: ValueGenerated.OnAdd,
                 afterSaveBehavior: PropertySaveBehavior.Throw,
                 sentinel: 0);
+            id.SetGetter(
+                int (SongVote instance) => SongVoteUnsafeAccessors.Id(instance),
+                bool (SongVote instance) => SongVoteUnsafeAccessors.Id(instance) == 0);
+            id.SetSetter(
+                SongVote (SongVote instance, int value) =>
+                {
+                    SongVoteUnsafeAccessors.Id(instance) = value;
+                    return instance;
+                });
+            id.SetMaterializationSetter(
+                SongVote (SongVote instance, int value) =>
+                {
+                    SongVoteUnsafeAccessors.Id(instance) = value;
+                    return instance;
+                });
+            id.SetAccessors(
+                int (IInternalEntry entry) => (entry.FlaggedAsStoreGenerated(0) ? entry.ReadStoreGeneratedValue<int>(0) : (entry.FlaggedAsTemporary(0) && SongVoteUnsafeAccessors.Id(((SongVote)(entry.Entity))) == 0 ? entry.ReadTemporaryValue<int>(0) : SongVoteUnsafeAccessors.Id(((SongVote)(entry.Entity))))),
+                int (IInternalEntry entry) => SongVoteUnsafeAccessors.Id(((SongVote)(entry.Entity))),
+                int (IInternalEntry entry) => entry.ReadOriginalValue<int>(id, 0),
+                int (IInternalEntry entry) => ((InternalEntityEntry)entry).ReadRelationshipSnapshotValue<int>(id, 0));
+            id.SetPropertyIndexes(
+                index: 0,
+                originalValueIndex: 0,
+                shadowIndex: -1,
+                relationshipIndex: 0,
+                storeGenerationIndex: 0);
+            id.TypeMapping = IntTypeMapping.Default.Clone(
+                comparer: new ValueComparer<int>(
+                    bool (int v1, int v2) => v1 == v2,
+                    int (int v) => v,
+                    int (int v) => v),
+                keyComparer: new ValueComparer<int>(
+                    bool (int v1, int v2) => v1 == v2,
+                    int (int v) => v,
+                    int (int v) => v),
+                providerValueComparer: new ValueComparer<int>(
+                    bool (int v1, int v2) => v1 == v2,
+                    int (int v) => v,
+                    int (int v) => v),
+                mappingInfo: new RelationalTypeMappingInfo(
+                    storeTypeName: "INTEGER"));
+            id.SetCurrentValueComparer(new EntryCurrentValueComparer<int>(id));
 
             var trackId = runtimeEntityType.AddProperty(
                 "TrackId",
@@ -42,6 +89,34 @@ namespace BreadCharts.WebApi.CompiledModels
                 propertyInfo: typeof(SongVote).GetProperty("TrackId", BindingFlags.Public | BindingFlags.Instance | BindingFlags.DeclaredOnly),
                 fieldInfo: typeof(SongVote).GetField("<TrackId>k__BackingField", BindingFlags.NonPublic | BindingFlags.Instance | BindingFlags.DeclaredOnly),
                 maxLength: 100);
+            trackId.SetGetter(
+                string (SongVote instance) => SongVoteUnsafeAccessors.TrackId(instance),
+                bool (SongVote instance) => SongVoteUnsafeAccessors.TrackId(instance) == null);
+            trackId.SetSetter(
+                SongVote (SongVote instance, string value) =>
+                {
+                    SongVoteUnsafeAccessors.TrackId(instance) = value;
+                    return instance;
+                });
+            trackId.SetMaterializationSetter(
+                SongVote (SongVote instance, string value) =>
+                {
+                    SongVoteUnsafeAccessors.TrackId(instance) = value;
+                    return instance;
+                });
+            trackId.SetAccessors(
+                string (IInternalEntry entry) => (entry.FlaggedAsStoreGenerated(1) ? entry.ReadStoreGeneratedValue<string>(1) : (entry.FlaggedAsTemporary(1) && SongVoteUnsafeAccessors.TrackId(((SongVote)(entry.Entity))) == null ? entry.ReadTemporaryValue<string>(1) : SongVoteUnsafeAccessors.TrackId(((SongVote)(entry.Entity))))),
+                string (IInternalEntry entry) => SongVoteUnsafeAccessors.TrackId(((SongVote)(entry.Entity))),
+                string (IInternalEntry entry) => entry.ReadOriginalValue<string>(trackId, 1),
+                string (IInternalEntry entry) => ((InternalEntityEntry)entry).ReadRelationshipSnapshotValue<string>(trackId, 1));
+            trackId.SetPropertyIndexes(
+                index: 1,
+                originalValueIndex: 1,
+                shadowIndex: -1,
+                relationshipIndex: 1,
+                storeGenerationIndex: 1);
+            trackId.TypeMapping = SqliteStringTypeMapping.Default;
+            trackId.SetCurrentValueComparer(new EntryCurrentValueComparer<string>(trackId));
 
             var userId = runtimeEntityType.AddProperty(
                 "UserId",
@@ -49,6 +124,34 @@ namespace BreadCharts.WebApi.CompiledModels
                 propertyInfo: typeof(SongVote).GetProperty("UserId", BindingFlags.Public | BindingFlags.Instance | BindingFlags.DeclaredOnly),
                 fieldInfo: typeof(SongVote).GetField("<UserId>k__BackingField", BindingFlags.NonPublic | BindingFlags.Instance | BindingFlags.DeclaredOnly),
                 maxLength: 450);
+            userId.SetGetter(
+                string (SongVote instance) => SongVoteUnsafeAccessors.UserId(instance),
+                bool (SongVote instance) => SongVoteUnsafeAccessors.UserId(instance) == null);
+            userId.SetSetter(
+                SongVote (SongVote instance, string value) =>
+                {
+                    SongVoteUnsafeAccessors.UserId(instance) = value;
+                    return instance;
+                });
+            userId.SetMaterializationSetter(
+                SongVote (SongVote instance, string value) =>
+                {
+                    SongVoteUnsafeAccessors.UserId(instance) = value;
+                    return instance;
+                });
+            userId.SetAccessors(
+                string (IInternalEntry entry) => SongVoteUnsafeAccessors.UserId(((SongVote)(entry.Entity))),
+                string (IInternalEntry entry) => SongVoteUnsafeAccessors.UserId(((SongVote)(entry.Entity))),
+                string (IInternalEntry entry) => entry.ReadOriginalValue<string>(userId, 2),
+                string (IInternalEntry entry) => entry.GetCurrentValue<string>(userId));
+            userId.SetPropertyIndexes(
+                index: 2,
+                originalValueIndex: 2,
+                shadowIndex: -1,
+                relationshipIndex: -1,
+                storeGenerationIndex: -1);
+            userId.TypeMapping = SqliteStringTypeMapping.Default;
+            userId.SetCurrentValueComparer(new EntryCurrentValueComparer<string>(userId));
 
             var votedAtUtc = runtimeEntityType.AddProperty(
                 "VotedAtUtc",
@@ -56,6 +159,33 @@ namespace BreadCharts.WebApi.CompiledModels
                 propertyInfo: typeof(SongVote).GetProperty("VotedAtUtc", BindingFlags.Public | BindingFlags.Instance | BindingFlags.DeclaredOnly),
                 fieldInfo: typeof(SongVote).GetField("<VotedAtUtc>k__BackingField", BindingFlags.NonPublic | BindingFlags.Instance | BindingFlags.DeclaredOnly),
                 sentinel: new DateTime(1, 1, 1, 0, 0, 0, 0, DateTimeKind.Unspecified));
+            votedAtUtc.SetGetter(
+                DateTime (SongVote instance) => SongVoteUnsafeAccessors.VotedAtUtc(instance),
+                bool (SongVote instance) => SongVoteUnsafeAccessors.VotedAtUtc(instance) == default(DateTime));
+            votedAtUtc.SetSetter(
+                SongVote (SongVote instance, DateTime value) =>
+                {
+                    SongVoteUnsafeAccessors.VotedAtUtc(instance) = value;
+                    return instance;
+                });
+            votedAtUtc.SetMaterializationSetter(
+                SongVote (SongVote instance, DateTime value) =>
+                {
+                    SongVoteUnsafeAccessors.VotedAtUtc(instance) = value;
+                    return instance;
+                });
+            votedAtUtc.SetAccessors(
+                DateTime (IInternalEntry entry) => SongVoteUnsafeAccessors.VotedAtUtc(((SongVote)(entry.Entity))),
+                DateTime (IInternalEntry entry) => SongVoteUnsafeAccessors.VotedAtUtc(((SongVote)(entry.Entity))),
+                DateTime (IInternalEntry entry) => entry.ReadOriginalValue<DateTime>(votedAtUtc, 3),
+                DateTime (IInternalEntry entry) => entry.GetCurrentValue<DateTime>(votedAtUtc));
+            votedAtUtc.SetPropertyIndexes(
+                index: 3,
+                originalValueIndex: 3,
+                shadowIndex: -1,
+                relationshipIndex: -1,
+                storeGenerationIndex: -1);
+            votedAtUtc.TypeMapping = SqliteDateTimeTypeMapping.Default;
 
             var key = runtimeEntityType.AddKey(
                 new[] { id });
@@ -83,6 +213,32 @@ namespace BreadCharts.WebApi.CompiledModels
                 propertyInfo: typeof(SongVote).GetProperty("Song", BindingFlags.Public | BindingFlags.Instance | BindingFlags.DeclaredOnly),
                 fieldInfo: typeof(SongVote).GetField("<Song>k__BackingField", BindingFlags.NonPublic | BindingFlags.Instance | BindingFlags.DeclaredOnly));
 
+            song.SetGetter(
+                SubmittedSong (SongVote instance) => SongVoteUnsafeAccessors.Song(instance),
+                bool (SongVote instance) => SongVoteUnsafeAccessors.Song(instance) == null);
+            song.SetSetter(
+                SongVote (SongVote instance, SubmittedSong value) =>
+                {
+                    SongVoteUnsafeAccessors.Song(instance) = value;
+                    return instance;
+                });
+            song.SetMaterializationSetter(
+                SongVote (SongVote instance, SubmittedSong value) =>
+                {
+                    SongVoteUnsafeAccessors.Song(instance) = value;
+                    return instance;
+                });
+            song.SetAccessors(
+                SubmittedSong (IInternalEntry entry) => SongVoteUnsafeAccessors.Song(((SongVote)(entry.Entity))),
+                SubmittedSong (IInternalEntry entry) => SongVoteUnsafeAccessors.Song(((SongVote)(entry.Entity))),
+                null,
+                SubmittedSong (IInternalEntry entry) => entry.GetCurrentValue<SubmittedSong>(song));
+            song.SetPropertyIndexes(
+                index: 0,
+                originalValueIndex: -1,
+                shadowIndex: -1,
+                relationshipIndex: 2,
+                storeGenerationIndex: -1);
             var votes = principalEntityType.AddNavigation("Votes",
                 runtimeForeignKey,
                 onDependent: false,
@@ -90,11 +246,80 @@ namespace BreadCharts.WebApi.CompiledModels
                 propertyInfo: typeof(SubmittedSong).GetProperty("Votes", BindingFlags.Public | BindingFlags.Instance | BindingFlags.DeclaredOnly),
                 fieldInfo: typeof(SubmittedSong).GetField("<Votes>k__BackingField", BindingFlags.NonPublic | BindingFlags.Instance | BindingFlags.DeclaredOnly));
 
+            votes.SetGetter(
+                ICollection<SongVote> (SubmittedSong instance) => SubmittedSongUnsafeAccessors.Votes(instance),
+                bool (SubmittedSong instance) => SubmittedSongUnsafeAccessors.Votes(instance) == null);
+            votes.SetSetter(
+                SubmittedSong (SubmittedSong instance, ICollection<SongVote> value) =>
+                {
+                    SubmittedSongUnsafeAccessors.Votes(instance) = value;
+                    return instance;
+                });
+            votes.SetMaterializationSetter(
+                SubmittedSong (SubmittedSong instance, ICollection<SongVote> value) =>
+                {
+                    SubmittedSongUnsafeAccessors.Votes(instance) = value;
+                    return instance;
+                });
+            votes.SetAccessors(
+                ICollection<SongVote> (IInternalEntry entry) => SubmittedSongUnsafeAccessors.Votes(((SubmittedSong)(entry.Entity))),
+                ICollection<SongVote> (IInternalEntry entry) => SubmittedSongUnsafeAccessors.Votes(((SubmittedSong)(entry.Entity))),
+                null,
+                ICollection<SongVote> (IInternalEntry entry) => entry.GetCurrentValue<ICollection<SongVote>>(votes));
+            votes.SetPropertyIndexes(
+                index: 0,
+                originalValueIndex: -1,
+                shadowIndex: -1,
+                relationshipIndex: 1,
+                storeGenerationIndex: -1);
+            votes.SetCollectionAccessor<SubmittedSong, ICollection<SongVote>, SongVote>(
+                ICollection<SongVote> (SubmittedSong entity) => SubmittedSongUnsafeAccessors.Votes(entity),
+                (SubmittedSong entity, ICollection<SongVote> collection) => SubmittedSongUnsafeAccessors.Votes(entity) = ((ICollection<SongVote>)collection),
+                (SubmittedSong entity, ICollection<SongVote> collection) => SubmittedSongUnsafeAccessors.Votes(entity) = ((ICollection<SongVote>)collection),
+                ICollection<SongVote> (SubmittedSong entity, Action<SubmittedSong, ICollection<SongVote>> setter) => ClrCollectionAccessorFactory.CreateAndSetHashSet<SubmittedSong, ICollection<SongVote>, SongVote>(entity, setter),
+                ICollection<SongVote> () => ((ICollection<SongVote>)(((ICollection<SongVote>)(new HashSet<SongVote>(ReferenceEqualityComparer.Instance))))));
             return runtimeForeignKey;
         }
 
         public static void CreateAnnotations(RuntimeEntityType runtimeEntityType)
         {
+            var id = runtimeEntityType.FindProperty("Id");
+            var trackId = runtimeEntityType.FindProperty("TrackId");
+            var userId = runtimeEntityType.FindProperty("UserId");
+            var votedAtUtc = runtimeEntityType.FindProperty("VotedAtUtc");
+            var key = runtimeEntityType.FindKey(new[] { id });
+            key.SetPrincipalKeyValueFactory(KeyValueFactoryFactory.CreateSimpleNonNullableFactory<int>(key));
+            key.SetIdentityMapFactory(IdentityMapFactoryFactory.CreateFactory<int>(key));
+            var song = runtimeEntityType.FindNavigation("Song");
+            runtimeEntityType.SetOriginalValuesFactory(
+                ISnapshot (IInternalEntry source) =>
+                {
+                    var structuralType = ((SongVote)(source.Entity));
+                    return ((ISnapshot)(new Snapshot<int, string, string, DateTime>(((ValueComparer<int>)(((IProperty)id).GetValueComparer())).Snapshot(source.GetCurrentValue<int>(id)), (source.GetCurrentValue<string>(trackId) == null ? null : ((ValueComparer<string>)(((IProperty)trackId).GetValueComparer())).Snapshot(source.GetCurrentValue<string>(trackId))), (source.GetCurrentValue<string>(userId) == null ? null : ((ValueComparer<string>)(((IProperty)userId).GetValueComparer())).Snapshot(source.GetCurrentValue<string>(userId))), ((ValueComparer<DateTime>)(((IProperty)votedAtUtc).GetValueComparer())).Snapshot(source.GetCurrentValue<DateTime>(votedAtUtc)))));
+                });
+            runtimeEntityType.SetStoreGeneratedValuesFactory(
+                ISnapshot () => ((ISnapshot)(new Snapshot<int, string>(((ValueComparer<int>)(((IProperty)id).GetValueComparer())).Snapshot(default(int)), (default(string) == null ? null : ((ValueComparer<string>)(((IProperty)trackId).GetValueComparer())).Snapshot(default(string)))))));
+            runtimeEntityType.SetTemporaryValuesFactory(
+                ISnapshot (IInternalEntry source) => ((ISnapshot)(new Snapshot<int, string>(default(int), default(string)))));
+            runtimeEntityType.SetShadowValuesFactory(
+                ISnapshot (IDictionary<string, object> source) => Snapshot.Empty);
+            runtimeEntityType.SetEmptyShadowValuesFactory(
+                ISnapshot () => Snapshot.Empty);
+            runtimeEntityType.SetRelationshipSnapshotFactory(
+                ISnapshot (IInternalEntry source) =>
+                {
+                    var structuralType = ((SongVote)(source.Entity));
+                    return ((ISnapshot)(new Snapshot<int, string, object>(((ValueComparer<int>)(((IProperty)id).GetKeyValueComparer())).Snapshot(source.GetCurrentValue<int>(id)), (source.GetCurrentValue<string>(trackId) == null ? null : ((ValueComparer<string>)(((IProperty)trackId).GetKeyValueComparer())).Snapshot(source.GetCurrentValue<string>(trackId))), source.GetCurrentValue<SubmittedSong>(song))));
+                });
+            runtimeEntityType.SetCounts(new PropertyCounts(
+                propertyCount: 4,
+                navigationCount: 1,
+                complexPropertyCount: 0,
+                complexCollectionCount: 0,
+                originalValueCount: 4,
+                shadowCount: 0,
+                relationshipCount: 3,
+                storeGeneratedCount: 2));
             runtimeEntityType.AddAnnotation("Relational:FunctionName", null);
             runtimeEntityType.AddAnnotation("Relational:Schema", null);
             runtimeEntityType.AddAnnotation("Relational:SqlQuery", null);

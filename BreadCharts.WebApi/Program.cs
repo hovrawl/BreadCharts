@@ -143,17 +143,14 @@ using (var scope = app.Services.CreateScope())
     // Only attempt manual creation if it looks like a local file path.
     if (!string.IsNullOrEmpty(dbPath) && dbPath != ":memory:")
     {
-        bool exists = File.Exists(dbPath);
-        if (!exists)
+        var dir = Path.GetDirectoryName(dbPath);
+        if (!string.IsNullOrEmpty(dir)) Directory.CreateDirectory(dir);
+        
+        db.Database.OpenConnection();
+        try
         {
-            var dir = Path.GetDirectoryName(dbPath);
-            if (!string.IsNullOrEmpty(dir)) Directory.CreateDirectory(dir);
-            
-            db.Database.OpenConnection();
-            try
-            {
-                var command = db.Database.GetDbConnection().CreateCommand();
-                command.CommandText = @"
+            var command = db.Database.GetDbConnection().CreateCommand();
+            command.CommandText = @"
                     CREATE TABLE IF NOT EXISTS ""AspNetUsers"" (
                         ""Id"" TEXT NOT NULL PRIMARY KEY,
                         ""UserName"" TEXT NULL,
@@ -172,37 +169,74 @@ using (var scope = app.Services.CreateScope())
                         ""AccessFailedCount"" INTEGER NOT NULL,
                         ""ThirdPartyId"" TEXT NULL,
                         ""AccessToken"" TEXT NULL,
-                        ""RefreshToken"" TEXT NULL
+                        ""RefreshToken"" TEXT NULL,
+                        ""DisplayName"" TEXT NULL
                     );
+                    CREATE TABLE IF NOT EXISTS ""AspNetUserLogins"" (
+                        ""LoginProvider"" TEXT NOT NULL,
+                        ""ProviderKey"" TEXT NOT NULL,
+                        ""ProviderDisplayName"" TEXT NULL,
+                        ""UserId"" TEXT NOT NULL,
+                        PRIMARY KEY (""LoginProvider"", ""ProviderKey""),
+                        CONSTRAINT ""FK_AspNetUserLogins_AspNetUsers_UserId"" FOREIGN KEY (""UserId"") REFERENCES ""AspNetUsers"" (""Id"") ON DELETE CASCADE
+                    );
+                    CREATE INDEX IF NOT EXISTS ""IX_AspNetUserLogins_UserId"" ON ""AspNetUserLogins"" (""UserId"");
                     CREATE TABLE IF NOT EXISTS ""SubmittedSongs"" (
-                        ""Id"" TEXT NOT NULL PRIMARY KEY,
-                        ""SpotifyId"" TEXT NOT NULL,
-                        ""Title"" TEXT NOT NULL,
-                        ""Artist"" TEXT NOT NULL,
-                        ""Album"" TEXT NOT NULL,
-                        ""ImageUrl"" TEXT NOT NULL,
-                        ""SubmittedById"" TEXT NOT NULL,
-                        ""SubmittedAt"" TEXT NOT NULL,
-                        CONSTRAINT ""FK_SubmittedSongs_AspNetUsers_SubmittedById"" FOREIGN KEY (""SubmittedById"") REFERENCES ""AspNetUsers"" (""Id"") ON DELETE CASCADE
+                        ""TrackId"" TEXT NOT NULL PRIMARY KEY,
+                        ""TrackName"" TEXT NOT NULL,
+                        ""SubmittedByUserId"" TEXT NOT NULL,
+                        ""SubmittedAtUtc"" TEXT NOT NULL,
+                        CONSTRAINT ""FK_SubmittedSongs_AspNetUsers_SubmittedByUserId"" FOREIGN KEY (""SubmittedByUserId"") REFERENCES ""AspNetUsers"" (""Id"") ON DELETE CASCADE
                     );
                     CREATE TABLE IF NOT EXISTS ""SongVotes"" (
                         ""Id"" INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,
-                        ""SongId"" TEXT NOT NULL,
+                        ""TrackId"" TEXT NOT NULL,
                         ""UserId"" TEXT NOT NULL,
-                        ""VotedAt"" TEXT NOT NULL,
+                        ""VotedAtUtc"" TEXT NOT NULL,
                         CONSTRAINT ""FK_SongVotes_AspNetUsers_UserId"" FOREIGN KEY (""UserId"") REFERENCES ""AspNetUsers"" (""Id"") ON DELETE CASCADE,
-                        CONSTRAINT ""FK_SongVotes_SubmittedSongs_SongId"" FOREIGN KEY (""SongId"") REFERENCES ""SubmittedSongs"" (""Id"") ON DELETE CASCADE
+                        CONSTRAINT ""FK_SongVotes_SubmittedSongs_TrackId"" FOREIGN KEY (""TrackId"") REFERENCES ""SubmittedSongs"" (""TrackId"") ON DELETE CASCADE
                     );
-                    CREATE INDEX IF NOT EXISTS ""IX_SongVotes_SongId"" ON ""SongVotes"" (""SongId"");
+                    CREATE INDEX IF NOT EXISTS ""IX_SongVotes_TrackId"" ON ""SongVotes"" (""TrackId"");
                     CREATE INDEX IF NOT EXISTS ""IX_SongVotes_UserId"" ON ""SongVotes"" (""UserId"");
-                    CREATE INDEX IF NOT EXISTS ""IX_SubmittedSongs_SubmittedById"" ON ""SubmittedSongs"" (""SubmittedById"");
+                    CREATE INDEX IF NOT EXISTS ""IX_SongVotes_TrackId_UserId"" ON ""SongVotes"" (""TrackId"", ""UserId"");
+                    CREATE INDEX IF NOT EXISTS ""IX_SubmittedSongs_SubmittedByUserId"" ON ""SubmittedSongs"" (""SubmittedByUserId"");
                 ";
-                command.ExecuteNonQuery();
-            }
-            finally
+            command.ExecuteNonQuery();
+
+            // Migrations: Add missing columns if they don't exist
+            // SQLite doesn't support 'IF NOT EXISTS' for ADD COLUMN in older versions or some providers, 
+            // and EF Core's Sqlite provider might not either in raw SQL. 
+            // We'll check column existence manually for each potential missing column.
+
+            var columns = new[] { ("AspNetUsers", "DisplayName") };
+            foreach (var (table, column) in columns)
             {
-                db.Database.CloseConnection();
+                var checkCmd = db.Database.GetDbConnection().CreateCommand();
+                checkCmd.CommandText = $"PRAGMA table_info(\"{table}\")";
+                bool exists = false;
+                using (var reader = checkCmd.ExecuteReader())
+                {
+                    while (reader.Read())
+                    {
+                        if (reader.GetString(1).Equals(column, StringComparison.OrdinalIgnoreCase))
+                        {
+                            exists = true;
+                            break;
+                        }
+                    }
+                }
+
+                if (!exists)
+                {
+                    var alterCmd = db.Database.GetDbConnection().CreateCommand();
+                    alterCmd.CommandText = $"ALTER TABLE \"{table}\" ADD COLUMN \"{column}\" TEXT NULL";
+                    alterCmd.ExecuteNonQuery();
+                }
             }
+        }
+        finally
+        {
+            db.Database.CloseConnection();
         }
     }
     else
@@ -230,13 +264,15 @@ app.MapGet("/auth/spotify", (string? redirectUrl) =>
 // Finalize OAuth and issue JWT + Spotify tokens
 app.MapGet("/auth/finalize", async (
     HttpContext context,
-    UserManager<ApplicationUser> userManager,
+    ApplicationDbContext dbContext,
     IConfiguration config) =>
 {
     var result = await context.AuthenticateAsync("External");
     if (!result.Succeeded) return Results.Unauthorized();
 
     var principal = result.Principal;
+    if (principal == null) return Results.Unauthorized();
+
     var spotifyId = principal.FindFirstValue("urn:spotify:id") ?? principal.FindFirstValue(ClaimTypes.NameIdentifier);
     var email = principal.FindFirstValue(ClaimTypes.Email);
     var name = principal.FindFirstValue(ClaimTypes.Name);
@@ -245,23 +281,57 @@ app.MapGet("/auth/finalize", async (
 
     if (string.IsNullOrEmpty(spotifyId)) return Results.BadRequest("Missing Spotify ID");
 
-    var user = await userManager.FindByLoginAsync("Spotify", spotifyId);
+    var user = await IdentityQueries.FindUserByLoginQuery(dbContext, "Spotify", spotifyId);
     if (user == null)
     {
+        var userName = email ?? spotifyId;
+        var normalizedUserName = userName.ToUpperInvariant();
+        
+        // Manual check for username collision if necessary, or just rely on DB constraints
+        if (await IdentityQueries.UserExistsByNormalizedUserNameQuery(dbContext, normalizedUserName))
+        {
+            // If collision, maybe append something or return error
+            // For SSO with Spotify, spotifyId should be unique.
+        }
+
         user = new ApplicationUser 
         { 
-            UserName = email ?? spotifyId, 
+            Id = Guid.NewGuid().ToString(),
+            UserName = userName, 
+            NormalizedUserName = normalizedUserName,
             Email = email, 
+            NormalizedEmail = email?.ToUpperInvariant(),
+            EmailConfirmed = true,
             DisplayName = name ?? "", 
-            ThirdPartyId = spotifyId 
+            ThirdPartyId = spotifyId,
+            SecurityStamp = Guid.NewGuid().ToString()
         };
-        await userManager.CreateAsync(user);
-        await userManager.AddLoginAsync(user, new UserLoginInfo("Spotify", spotifyId, "Spotify"));
+        
+        dbContext.Users.Add(user);
+        dbContext.UserLogins.Add(new IdentityUserLogin<string>
+        {
+            LoginProvider = "Spotify",
+            ProviderKey = spotifyId,
+            ProviderDisplayName = "Spotify",
+            UserId = user.Id
+        });
+        
+        await dbContext.SaveChangesAsync();
     }
     else
     {
-        user.DisplayName = name ?? user.DisplayName;
-        await userManager.UpdateAsync(user);
+        // Update user properties directly
+        bool changed = false;
+        if (user.DisplayName != (name ?? ""))
+        {
+            user.DisplayName = name ?? "";
+            changed = true;
+        }
+
+        if (changed)
+        {
+            await dbContext.SaveChangesAsync();
+        }
     }
 
     // Generate JWT for app authentication
@@ -340,5 +410,21 @@ voting.MapDelete("/vote/{trackId}", async (IVotingService svc, ClaimsPrincipal u
 app.MapGet("/auth/error", (string? message) => Results.Problem(detail: message, title: "Authentication Error"));
 
 app.Run();
+
+public static class IdentityQueries
+{
+    public static readonly Func<ApplicationDbContext, string, string, Task<ApplicationUser?>> FindUserByLoginQuery =
+        EF.CompileAsyncQuery((ApplicationDbContext db, string loginProvider, string providerKey) =>
+            db.Users.FirstOrDefault(u => db.UserLogins.Any(l => 
+                l.LoginProvider == loginProvider && l.ProviderKey == providerKey && l.UserId == u.Id)));
+
+    public static readonly Func<ApplicationDbContext, string, Task<ApplicationUser?>> FindUserByIdQuery =
+        EF.CompileAsyncQuery((ApplicationDbContext db, string id) =>
+            db.Users.FirstOrDefault(u => u.Id == id));
+
+    public static readonly Func<ApplicationDbContext, string, Task<bool>> UserExistsByNormalizedUserNameQuery =
+        EF.CompileAsyncQuery((ApplicationDbContext db, string normalizedUserName) =>
+            db.Users.Any(u => u.NormalizedUserName == normalizedUserName));
+}
 
 public record SubmitRequest(string TrackId, string TrackName);

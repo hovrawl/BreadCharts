@@ -11,7 +11,7 @@ namespace BreadCharts.Avalonia.Services;
 
 public partial class AuthService
 {
-    private const string ApiBaseUrl = "http://127.0.0.1:5206"; // TODO: Make dynamic
+    private const string ApiBaseUrl = "https://127.0.0.1:7206"; // TODO: Make dynamic
     private const string RedirectUri = "http://127.0.0.1:5543/auth/callback";
 
     private static AuthResult? _pendingResult;

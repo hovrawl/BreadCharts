@@ -47,7 +47,9 @@ builder.Services.AddAuthentication(options =>
     {
         options.DefaultScheme = JwtBearerDefaults.AuthenticationScheme;
         options.DefaultChallengeScheme = "Spotify";
+        options.DefaultSignInScheme = "External";
     })
+    .AddCookie("External")
     .AddJwtBearer(options =>
     {
         options.TokenValidationParameters = new TokenValidationParameters
@@ -231,7 +233,7 @@ app.MapGet("/auth/finalize", async (
     UserManager<ApplicationUser> userManager,
     IConfiguration config) =>
 {
-    var result = await context.AuthenticateAsync("Spotify");
+    var result = await context.AuthenticateAsync("External");
     if (!result.Succeeded) return Results.Unauthorized();
 
     var principal = result.Principal;
@@ -264,7 +266,8 @@ app.MapGet("/auth/finalize", async (
 
     // Generate JWT for app authentication
     var tokenHandler = new System.IdentityModel.Tokens.Jwt.JwtSecurityTokenHandler();
-    var key = Encoding.UTF8.GetBytes(config["Jwt:Key"] ?? "SUPER_SECRET_KEY_PLEASE_CHANGE_IN_PRODUCTION");
+    var jwtKey = config["Jwt:Key"] ?? "SUPER_SECRET_KEY_PLEASE_CHANGE_IN_PRODUCTION";
+    var keyBytes = Encoding.UTF8.GetBytes(jwtKey);
     var tokenDescriptor = new SecurityTokenDescriptor
     {
         Subject = new ClaimsIdentity([
@@ -275,7 +278,7 @@ app.MapGet("/auth/finalize", async (
         Expires = DateTime.UtcNow.AddDays(7),
         Issuer = config["Jwt:Issuer"],
         Audience = config["Jwt:Audience"],
-        SigningCredentials = new SigningCredentials(new SymmetricSecurityKey(key), SecurityAlgorithms.HmacSha256Signature)
+        SigningCredentials = new SigningCredentials(new SymmetricSecurityKey(keyBytes), SecurityAlgorithms.HmacSha256Signature)
     };
     var token = tokenHandler.CreateToken(tokenDescriptor);
     var jwt = tokenHandler.WriteToken(token);

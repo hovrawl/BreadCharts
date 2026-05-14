@@ -15,9 +15,12 @@ public partial class AuthService
     private const string RedirectUri = "http://127.0.0.1:5543/auth/callback";
 
     private static AuthResult? _pendingResult;
+    private AuthResult? _currentResult;
     private TaskCompletionSource<AuthResult>? _tcs;
 
     public bool IsBrowser => OperatingSystem.IsBrowser();
+
+    public AuthResult? CurrentResult => _currentResult;
 
     public AuthService()
     {
@@ -57,6 +60,7 @@ public partial class AuthService
         var result = ParseResult(uri);
         if (result != null)
         {
+            _currentResult = result;
             _tcs?.TrySetResult(result);
         }
         else
@@ -125,17 +129,31 @@ public partial class AuthService
     {
         if (tokenResponse == null)
             throw new ArgumentNullException(nameof(tokenResponse), "Token response cannot be null");
-        var spotifyClient = new SpotifyClient(tokenResponse.AccessToken);
-        var userProfile = await spotifyClient.UserProfile.Current();
+        
+        var userProfile = await GetUserProfile(tokenResponse.AccessToken);
         if (userProfile == null)
             throw new InvalidOperationException("Failed to retrieve user profile from Spotify API");
 
-        var returnProfile = new UserProfile()
-        {
-            Id = userProfile.Id,
-            Name = userProfile.DisplayName,
+        _currentResult = new AuthResult 
+        { 
+            SpotifyToken = tokenResponse,
+            UserId = userProfile.Id
         };
-        return returnProfile;
+        
+        return userProfile;
+    }
+
+    private async Task<UserProfile?> GetUserProfile(string accessToken)
+    {
+        var spotifyClient = new SpotifyClient(accessToken);
+        var privateUser = await spotifyClient.UserProfile.Current();
+        if (privateUser == null) return null;
+        
+        return new UserProfile
+        {
+            Id = privateUser.Id,
+            Name = privateUser.DisplayName,
+        };
     }
 }
 
@@ -150,6 +168,7 @@ public partial class BrowserInterop
 public class AuthResult
 {
     public string AppToken { get; set; } = "";
+    public string? UserId { get; set; }
     public AuthorizationCodeTokenResponse SpotifyToken { get; set; } = null!;
 }
 

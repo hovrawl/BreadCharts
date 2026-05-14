@@ -22,7 +22,6 @@ public partial class SearchViewModel :ViewModelBase
 
     public async Task<List<ChartOption>> Search(string query)
     {
-        return null;
-        //return await _spotifyService.Search(CurrentUser.Id, query);
+        return await _spotifyService.Search(query);
     }
 }

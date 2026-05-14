@@ -15,16 +15,33 @@ public class SpotifyService
     private const string _clientSecret = "29b610aae47944668afc79084a856f0b";
     private static readonly ConcurrentDictionary<string, SpotifyClient> _clients = new();
     private const int PageSize = 20;
+    private readonly AuthService? _authService;
     
-    public SpotifyService()
+    public SpotifyService(AuthService? authService = null)
     {
-        
+        _authService = authService;
     }
 
-     public async Task<SpotifyClient> GetClient(string userId, string accessToken, string? refreshToken = null)
+    public async Task<SpotifyClient> GetClient(string? userId = null, string? accessToken = null, string? refreshToken = null)
     {
-        if (string.IsNullOrWhiteSpace(userId)) throw new ArgumentException("userId is required", nameof(userId));
-        if (string.IsNullOrWhiteSpace(accessToken)) throw new ArgumentException("accessToken is required", nameof(accessToken));
+        if (string.IsNullOrWhiteSpace(userId) || string.IsNullOrWhiteSpace(accessToken))
+        {
+            var current = _authService?.CurrentResult;
+            if (current?.SpotifyToken != null)
+            {
+                accessToken ??= current.SpotifyToken.AccessToken;
+                refreshToken ??= current.SpotifyToken.RefreshToken;
+                userId ??= current.UserId;
+                
+                if (string.IsNullOrWhiteSpace(userId))
+                {
+                    userId = "current"; 
+                }
+            }
+        }
+
+        if (string.IsNullOrWhiteSpace(userId)) throw new ArgumentException("userId is required or must be available in AuthService", nameof(userId));
+        if (string.IsNullOrWhiteSpace(accessToken)) throw new ArgumentException("accessToken is required or must be available in AuthService", nameof(accessToken));
 
         // If a client exists for this user and current access token, return it.
         var cacheKey = $"{userId}:{accessToken}";
@@ -53,7 +70,7 @@ public class SpotifyService
         return client;
     }
 
-    public async Task<UserProfile?> GetUserProfile(string userId, string accessToken, string? refreshToken = null)
+    public async Task<UserProfile?> GetUserProfile(string? userId = null, string? accessToken = null, string? refreshToken = null)
     {
         var spotify = await GetClient(userId, accessToken, refreshToken);
         var privateUser = await spotify.UserProfile.Current();
@@ -65,7 +82,7 @@ public class SpotifyService
         };
     }
 
-    public async Task<List<FullTrack>> GetBasicTracks(string userId, string accessToken, string? refreshToken = null)
+    public async Task<List<FullTrack>> GetBasicTracks(string? userId = null, string? accessToken = null, string? refreshToken = null)
     {
         var spotify = await GetClient(userId, accessToken, refreshToken);
         var returnList = new List<FullTrack>();
@@ -74,9 +91,9 @@ public class SpotifyService
         return tracksResponse.Items.ToList();
     }
 
-    public async Task<List<ChartOption>> Search(string userId, string accessToken, string? refreshToken, string searchTerm, int page = -1)
+    public async Task<List<ChartOption>> Search(string searchTerm, int page = -1)
     {
-        var spotify = await GetClient(userId, accessToken, refreshToken);
+        var spotify = await GetClient();
         var returnList = new List<ChartOption>();
         if (string.IsNullOrWhiteSpace(searchTerm)) return returnList;
 
@@ -121,7 +138,7 @@ public class SpotifyService
         return returnList;
     }
     
-    public async Task<FullArtist?> GetArtist(string userId, string accessToken, string? refreshToken, string id)
+    public async Task<FullArtist?> GetArtist(string? userId, string? accessToken, string? refreshToken, string id)
     {
         var spotify = await GetClient(userId, accessToken, refreshToken);
         if (string.IsNullOrWhiteSpace(id)) return null;
@@ -129,7 +146,7 @@ public class SpotifyService
         return artist;
     }
 
-    public async Task<FullAlbum?> GetAlbum(string userId, string accessToken, string? refreshToken, string id)
+    public async Task<FullAlbum?> GetAlbum(string? userId, string? accessToken, string? refreshToken, string id)
     {
         var spotify = await GetClient(userId, accessToken, refreshToken);
         if (string.IsNullOrWhiteSpace(id)) return null;
@@ -137,7 +154,7 @@ public class SpotifyService
         return album;
     }
 
-    public async Task<FullPlaylist?> GetPlaylist(string userId, string accessToken, string? refreshToken, string id)
+    public async Task<FullPlaylist?> GetPlaylist(string? userId, string? accessToken, string? refreshToken, string id)
     {
         var spotify = await GetClient(userId, accessToken, refreshToken);
         if (string.IsNullOrWhiteSpace(id)) return null;
@@ -145,7 +162,7 @@ public class SpotifyService
         return playlist;
     }
 
-    public async Task<List<ChartOption>> GetArtistTopTracksChartOptions(string userId, string accessToken, string? refreshToken, string artistId, string market = "US")
+    public async Task<List<ChartOption>> GetArtistTopTracksChartOptions(string? userId, string? accessToken, string? refreshToken, string artistId, string market = "US")
     {
         var spotify = await GetClient(userId, accessToken, refreshToken);
         var list = new List<ChartOption>();
@@ -161,7 +178,7 @@ public class SpotifyService
         return list;
     }
 
-    public async Task<List<ChartOption>> GetArtistAlbumsChartOptions(string userId, string accessToken, string? refreshToken, string artistId)
+    public async Task<List<ChartOption>> GetArtistAlbumsChartOptions(string? userId, string? accessToken, string? refreshToken, string artistId)
     {
         var spotify = await GetClient(userId, accessToken, refreshToken);
         var list = new List<ChartOption>();
@@ -178,7 +195,7 @@ public class SpotifyService
         return list;
     }
 
-    public async Task<List<ChartOption>> GetAlbumTracksChartOptions(string userId, string accessToken, string? refreshToken, string albumId)
+    public async Task<List<ChartOption>> GetAlbumTracksChartOptions(string? userId, string? accessToken, string? refreshToken, string albumId)
     {
         var spotify = await GetClient(userId, accessToken, refreshToken);
         var list = new List<ChartOption>();
@@ -195,7 +212,7 @@ public class SpotifyService
         return list;
     }
 
-    public async Task<List<ChartOption>> GetPlaylistTracksChartOptions(string userId, string accessToken, string? refreshToken, string playlistId)
+    public async Task<List<ChartOption>> GetPlaylistTracksChartOptions(string? userId, string? accessToken, string? refreshToken, string playlistId)
     {
         var spotify = await GetClient(userId, accessToken, refreshToken);
         var list = new List<ChartOption>();

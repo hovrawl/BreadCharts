@@ -18,5 +18,6 @@ public static class ServiceCollectionExtensions
         collection.AddSingleton<NavigationService>();
         collection.AddTransient<MainViewModel>();
         collection.AddTransient<AuthViewModel>();
+        collection.AddTransient<SearchViewModel>();
     }
 }

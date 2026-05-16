@@ -45,12 +45,25 @@ public partial class SearchView : UserControl
         }
     }
 
-    private async Task<List<ChartOption>> RunSearchQuery(string query)
+    private async Task RunSearchQuery(string query)
     {
-        if (DataContext is not SearchViewModel vm) return null;
+        if (DataContext is not SearchViewModel vm) return;
         
-        var results = await vm.Search(query);
+        await vm.Search(query);
+    }
+
+    private void SearchResultsBox_OnSelectionChanged(object? sender, SelectionChangedEventArgs e)
+    {
+        // Show details for chart option
+        if (sender is not ListBox { SelectedItem: ChartOption option })
+        {
+            return;
+        }
         
-        return results;
+        if (DataContext is not SearchViewModel vm) return;
+        
+        // Nav Frame 
+        vm.NavigateToChartOptionsDetails(option);
+        
     }
 }

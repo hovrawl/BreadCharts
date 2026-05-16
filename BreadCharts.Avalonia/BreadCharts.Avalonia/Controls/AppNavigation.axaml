@@ -71,7 +71,7 @@
             
             <fa:FAFrame
                 Name="NavFrame"
-                HorizontalAlignment="Center"
+                HorizontalAlignment="Stretch"
             >
             </fa:FAFrame>
         </Border>

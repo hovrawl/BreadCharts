@@ -1,0 +1,46 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             xmlns:viewModels="clr-namespace:BreadCharts.Avalonia.ViewModels"
+             xmlns:spotify="clr-namespace:SpotifyAPI.Web;assembly=SpotifyAPI.Web"
+             
+             mc:Ignorable="d" d:DesignWidth="800" d:DesignHeight="450"
+             x:DataType="viewModels:ChartOptionDetailsViewModel"
+             x:Class="BreadCharts.Avalonia.Controls.ChartOptionDetailsView">
+    <StackPanel HorizontalAlignment="Center">
+        <!-- image preview -->
+        <Border
+            CornerRadius="10"
+            BorderThickness="1">
+            <Panel>
+                <Carousel Name="ImageCarousel"
+                          ItemsSource="{CompiledBinding LoadedImages}">
+                    <Carousel.PageTransition>
+                        <CompositePageTransition>
+                            <PageSlide Duration="0:00:01.500" Orientation="Horizontal" />
+                        </CompositePageTransition>
+                    </Carousel.PageTransition>
+                    <Carousel.ItemTemplate>
+                        <DataTemplate x:DataType="Bitmap">
+                            <!-- Bind Source directly to the Bitmap object -->
+                            <Image Source="{CompiledBinding}" MaxHeight="300" />
+                        </DataTemplate>
+                    </Carousel.ItemTemplate>
+                </Carousel>
+                <Panel Margin="20">
+                    <Button Background="White" Click="Previous">&lt;</Button>
+                    <Button Background="White" Click="Next"
+                            HorizontalAlignment="Right">&gt;</Button>
+                </Panel>
+            </Panel>
+        </Border>
+        
+        <!-- name -->
+        <TextBlock Text="{CompiledBinding  ChartOption.Name}"></TextBlock>
+        <!-- related items -->
+        <ListBox>
+            
+        </ListBox>
+    </StackPanel>
+</UserControl>

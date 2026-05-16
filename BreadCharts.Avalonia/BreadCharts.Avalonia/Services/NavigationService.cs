@@ -1,5 +1,6 @@
 using System;
 using System.Threading.Tasks;
+using BreadCharts.Avalonia.Controls;
 using BreadCharts.Avalonia.ViewModels;
 using BreadCharts.Avalonia.Views;
 using BreadCharts.Avalonia.Views.User;
@@ -63,7 +64,7 @@ public class NavigationService
         }
     }
 
-    public void Navigate(string tag, string? data = "")
+    public void Navigate(string tag, object? data = null)
     {
         if (_frame == null) return;
         if (string.IsNullOrEmpty(tag)) return;
@@ -88,6 +89,11 @@ public class NavigationService
             case AuthView.ViewName:
             {
                 _frame.Navigate(typeof(AuthView), data);
+                break;
+            }
+            case ChartOptionDetailsView.ViewName:
+            {
+                _frame.Navigate(typeof(ChartOptionDetailsView), data);
                 break;
             }
             default:

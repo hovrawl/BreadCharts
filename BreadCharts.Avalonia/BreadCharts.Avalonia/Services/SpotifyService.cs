@@ -231,4 +231,46 @@ public class SpotifyService
         }
         return list;
     }
+
+    public async Task<ChartOptionDetails> LoadChartOptionDetails(ChartOption option)
+    {
+        var spotify = await GetClient();
+        var id = option.Id;
+        ChartOptionDetails details;
+        switch (option.Type)
+        {
+            case ChartOptionType.Track:
+                var track = await spotify.Tracks.Get(id);
+                details = track.ToChartOptionDetails();
+                break;
+            case ChartOptionType.Album:
+                var album = await spotify.Albums.Get(id);
+                details = album.ToChartOptionDetails();
+                break;
+            case ChartOptionType.Artist:
+                var artist = await spotify.Artists.Get(id);
+                details = artist.ToChartOptionDetails();
+                break;
+            case ChartOptionType.Playlist:
+                var playlist = await spotify.Playlists.Get(id);
+                details = playlist.ToChartOptionDetails();
+                break;
+            default:
+                throw new ArgumentException($"Unsupported chart option type: {option.Type}");
+        }
+        return details;
+    }
+
+    public async Task<IEnumerable<ChartOption>> GetRelatedChartOptions(ChartOption option)
+    {
+        var spotify = await GetClient();
+        var id = option.Id;
+        var relatedOptions = new List<ChartOption>();
+        // var relatedOptionsResponse = await spotify.RelatedChartOptions.Get(id);
+        // foreach (var relatedOption in relatedOptionsResponse)
+        // {
+        //     relatedOptions.Add(relatedOption.ToChartOption());
+        // }
+        return relatedOptions;
+    }
 }

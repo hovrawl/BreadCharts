@@ -4,6 +4,8 @@ namespace BreadCharts.Core.Models.Mapping;
 
 public static class ChartOptionMapping
 {
+    #region Chart Options
+
     public static ChartOption ToChartOption(this FullArtist artist)
     {
         return new ChartOption
@@ -56,4 +58,53 @@ public static class ChartOptionMapping
             Type = ChartOptionType.Playlist
         };
     }
+    
+    #endregion
+
+    #region Chart Option Details
+    public static ChartOptionDetails ToChartOptionDetails(this FullPlaylist playlist)
+    {
+        return new ChartOptionDetails()
+        {
+            Id = playlist.Id,
+            Name = playlist.Name,
+            Description = playlist.Description,
+            Images = playlist.Images,
+        };
+    }
+    
+    public static ChartOptionDetails ToChartOptionDetails(this FullArtist artist)
+    {
+        return new ChartOptionDetails()
+        {
+            Id = artist.Id,
+            Name = artist.Name,
+            Description = string.Join(", ", artist.Genres),
+            Images = artist.Images,
+        };
+    }
+    
+    public static ChartOptionDetails ToChartOptionDetails(this FullTrack track)
+    {
+        return new ChartOptionDetails()
+        {
+            Id = track.Id,
+            Name = track.Name,
+            Description = track.Album.Name,
+            Images = track.Album.Images,
+        };
+    }
+    
+    public static ChartOptionDetails ToChartOptionDetails(this FullAlbum album)
+    {
+        return new ChartOptionDetails()
+        {
+            Id = album.Id,
+            Name = album.Name,
+            Description = $"{album.AlbumType} - {album.Name}",
+            Images = album.Images,
+        };
+    }
+    
+    #endregion
 }

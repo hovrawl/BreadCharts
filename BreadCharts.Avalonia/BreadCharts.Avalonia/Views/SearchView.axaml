@@ -3,10 +3,11 @@
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
              xmlns:viewModels="clr-namespace:BreadCharts.Avalonia.ViewModels"
+             xmlns:models="clr-namespace:BreadCharts.Core.Models;assembly=BreadCharts.Core"
              mc:Ignorable="d" d:DesignWidth="800" d:DesignHeight="450"
              x:DataType="viewModels:SearchViewModel"
              x:Class="BreadCharts.Avalonia.Views.SearchView">
-    <StackPanel>
+    <StackPanel HorizontalAlignment="Stretch">
         <Border>
             <TextBox Name="SearchQueryBox"
                      Text="{CompiledBinding SearchQuery}"
@@ -14,8 +15,19 @@
                 
             </TextBox>
         </Border>
-        <ListBox Name="SearchResultsBox">
+        <ScrollViewer
+            HorizontalScrollBarVisibility="Disabled"
+            VerticalScrollBarVisibility="Auto">
             
-        </ListBox>
+            <ListBox Name="SearchResultsBox"
+                     ItemsSource="{CompiledBinding SearchResults}"
+                     SelectionChanged="SearchResultsBox_OnSelectionChanged">
+                <ListBox.ItemTemplate>
+                    <DataTemplate DataType="models:ChartOption">
+                        <TextBlock Text="{CompiledBinding Name}"></TextBlock>
+                    </DataTemplate>
+                </ListBox.ItemTemplate>
+            </ListBox>
+        </ScrollViewer>
     </StackPanel>
 </UserControl>

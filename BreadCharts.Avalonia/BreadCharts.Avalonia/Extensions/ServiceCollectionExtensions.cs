@@ -16,8 +16,10 @@ public static class ServiceCollectionExtensions
         collection.AddSingleton<SpotifyService>();
         collection.AddSingleton<NavigationFactory>();
         collection.AddSingleton<NavigationService>();
+        collection.AddSingleton<ImageService>();
         collection.AddTransient<MainViewModel>();
         collection.AddTransient<AuthViewModel>();
         collection.AddTransient<SearchViewModel>();
+        collection.AddScoped<ChartOptionDetailsViewModel>();
     }
 }

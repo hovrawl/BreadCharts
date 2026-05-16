@@ -5,6 +5,7 @@
       <map>
         <entry key="BreadCharts.Avalonia/BreadCharts.Avalonia/App.axaml" value="BreadCharts.Avalonia/BreadCharts.Avalonia.Desktop/BreadCharts.Avalonia.Desktop.csproj" />
         <entry key="BreadCharts.Avalonia/BreadCharts.Avalonia/Controls/AppNavigation.axaml" value="BreadCharts.Avalonia/BreadCharts.Avalonia.Desktop/BreadCharts.Avalonia.Desktop.csproj" />
+        <entry key="BreadCharts.Avalonia/BreadCharts.Avalonia/Controls/ChartOptionsDetails.axaml" value="BreadCharts.Avalonia/BreadCharts.Avalonia.Desktop/BreadCharts.Avalonia.Desktop.csproj" />
         <entry key="BreadCharts.Avalonia/BreadCharts.Avalonia/Views/HomeView.axaml" value="BreadCharts.Avalonia/BreadCharts.Avalonia.Desktop/BreadCharts.Avalonia.Desktop.csproj" />
         <entry key="BreadCharts.Avalonia/BreadCharts.Avalonia/Views/MainView.axaml" value="BreadCharts.Avalonia/BreadCharts.Avalonia.Desktop/BreadCharts.Avalonia.Desktop.csproj" />
         <entry key="BreadCharts.Avalonia/BreadCharts.Avalonia/Views/MainWindow.axaml" value="BreadCharts.Avalonia/BreadCharts.Avalonia.Desktop/BreadCharts.Avalonia.Desktop.csproj" />

@@ -12,6 +12,7 @@ public static class ServiceCollectionExtensions
     {
         baseAddress ??= "https://127.0.0.1:7206";
         collection.AddSingleton<HttpClient>(new HttpClient { BaseAddress = new Uri(baseAddress) });
+        collection.AddSingleton<ServerDiscoveryService>();
         collection.AddSingleton<ApiClient>();
         collection.AddSingleton<AuthService>();
         collection.AddSingleton<SpotifyService>();
@@ -19,6 +20,7 @@ public static class ServiceCollectionExtensions
         collection.AddSingleton<NavigationService>();
         collection.AddSingleton<ImageService>();
         collection.AddTransient<MainViewModel>();
+        collection.AddTransient<ServerSelectionViewModel>();
         collection.AddTransient<AuthViewModel>();
         collection.AddTransient<SearchViewModel>();
         collection.AddScoped<ChartOptionDetailsViewModel>();

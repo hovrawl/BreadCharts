@@ -21,6 +21,7 @@ public class UserSummary
 }
 
 [JsonSourceGenerationOptions(WriteIndented = true)]
+[JsonSerializable(typeof(ServerDiscoveryData))]
 [JsonSerializable(typeof(AuthResponse))]
 [JsonSerializable(typeof(List<SubmittedSong>))]
 [JsonSerializable(typeof(SubmitRequest))]

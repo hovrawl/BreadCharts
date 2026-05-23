@@ -24,6 +24,7 @@ builder.Services.ConfigureHttpJsonOptions(options =>
 
 // 1. Configure Services
 builder.Services.AddOpenApi();
+builder.Services.AddHostedService<ServerBroadcastService>();
 
 // DB and Identity
 var connectionString = builder.Configuration.GetConnectionString("DefaultConnection") ?? "Data Source=app.db";

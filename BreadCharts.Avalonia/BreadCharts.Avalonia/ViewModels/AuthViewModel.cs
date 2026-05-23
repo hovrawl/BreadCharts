@@ -17,10 +17,15 @@ public partial class AuthViewModel : ViewModelBase
 
     public bool IsBrowser => _authService.IsBrowser;
 
-    public AuthViewModel(AuthService authService, NavigationService navService)
+    public AuthViewModel(AuthService authService, NavigationService navService, ApiClient apiClient)
     {
         _authService = authService;
         _navService = navService;
+        
+        if (apiClient.BaseAddress != null)
+        {
+            AuthUri = new Uri(new Uri(apiClient.BaseAddress), "/auth/spotify");
+        }
     }
 
     [RelayCommand]

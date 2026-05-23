@@ -1,0 +1,20 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Authenticating...</title>
+</head>
+<body>
+    <script>
+        console.log("Auth callback page loaded. URL:", window.location.href);
+        // Send the current URL (which contains the tokens) back to the opener window
+        if (window.opener) {
+            console.log("Found opener window, posting message...");
+            window.opener.postMessage(window.location.href, "*");
+            // The opener (main app) will close this window once it receives the message
+        } else {
+            console.warn("No opener window found!");
+            document.body.innerHTML = "Authentication complete. You can close this window.";
+        }
+    </script>
+</body>
+</html>

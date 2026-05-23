@@ -10,13 +10,26 @@ namespace BreadCharts.Avalonia.Services;
 
 public class ApiClient
 {
-    private readonly HttpClient _http;
+    private HttpClient _http;
     private string? _appToken;
 
     public ApiClient(HttpClient http)
     {
         _http = http;
     }
+
+    public void SetBaseAddress(string address)
+    {
+        BaseAddress = address;
+        var newHttp = new HttpClient { BaseAddress = new Uri(address) };
+        if (!string.IsNullOrEmpty(_appToken))
+        {
+            newHttp.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", _appToken);
+        }
+        _http = newHttp;
+    }
+
+    public string? BaseAddress { get; private set; }
 
     public void SetAppToken(string? token)
     {

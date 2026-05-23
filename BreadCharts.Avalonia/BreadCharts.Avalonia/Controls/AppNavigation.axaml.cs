@@ -22,11 +22,9 @@ public partial class AppNavigation : UserControl
         if (DataContext is MainViewModel viewModel)
         {
             viewModel.NavService.SetFrame(NavFrame);
-        }
-        if (PageSelection.Items.Count > 0)
-        {
-            var homeItem = PageSelection.Items[0];
-            PageSelection.SelectedItem = homeItem;
+            
+            // Start with server selection
+            viewModel.NavService.Navigate(ServerSelectionView.ViewName);
         }
     }
 

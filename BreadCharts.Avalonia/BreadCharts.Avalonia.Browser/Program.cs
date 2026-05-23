@@ -9,8 +9,10 @@ internal sealed partial class Program
 {
     private static async Task Main(string[] args)
     {
+        string? baseAddress = null;
         if (args.Length > 0 && Uri.TryCreate(args[0], UriKind.Absolute, out var uri))
         {
+            baseAddress = $"{uri.Scheme}://{uri.Host}{(uri.IsDefaultPort ? "" : $":{uri.Port}")}";
             var authService = new BreadCharts.Avalonia.Services.AuthService();
             var result = authService.ParseResult(uri);
             if (result != null)
@@ -19,7 +21,7 @@ internal sealed partial class Program
             }
         }
 
-        await BuildAvaloniaApp()
+        await BuildAvaloniaApp(baseAddress)
             .WithInterFont()
 #if DEBUG
             .WithDeveloperTools()
@@ -27,6 +29,13 @@ internal sealed partial class Program
             .StartBrowserAppAsync("out");
     }
 
-    public static AppBuilder BuildAvaloniaApp()
-        => AppBuilder.Configure<App>();
+    public static AppBuilder BuildAvaloniaApp(string? baseAddress = null)
+        => AppBuilder.Configure<App>()
+            .AfterSetup(_ =>
+            {
+                if (App.Current is App app)
+                {
+                    app.BaseAddress = baseAddress;
+                }
+            });
 }

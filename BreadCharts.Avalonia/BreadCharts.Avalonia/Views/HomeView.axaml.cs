@@ -36,7 +36,6 @@ public partial class HomeView : UserControl
         
             // Proceed with the token
             await viewModel.HandleAuthResult(authResult);
-            viewModel.NavService.Navigate(ViewName);
         }
         catch (Exception ex)
         {

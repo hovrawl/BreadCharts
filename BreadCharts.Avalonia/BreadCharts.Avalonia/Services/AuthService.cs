@@ -11,8 +11,8 @@ namespace BreadCharts.Avalonia.Services;
 
 public partial class AuthService
 {
-    private const string ApiBaseUrl = "https://127.0.0.1:7206"; // TODO: Make dynamic
-    private const string RedirectUri = "http://127.0.0.1:5543/auth/callback";
+    private string _apiBaseUrl = "https://127.0.0.1:7206"; 
+    private string _redirectUri = "http://127.0.0.1:5543/auth/callback";
 
     private static AuthResult? _pendingResult;
     private AuthResult? _currentResult;
@@ -24,6 +24,24 @@ public partial class AuthService
 
     public AuthService()
     {
+        if (IsBrowser)
+        {
+            // Detect origin from browser if possible, otherwise rely on SetBaseAddress
+            // For now, we'll allow it to be updated via a method or property
+        }
+    }
+
+    public void SetApiBaseUrl(string apiBaseUrl)
+    {
+        _apiBaseUrl = apiBaseUrl;
+    }
+
+    public void SetRedirectBase(string baseAddress)
+    {
+        Log($"SetRedirectBase called with: {baseAddress}");
+        var suffix = IsBrowser ? "auth_callback.html" : "auth/callback";
+        _redirectUri = $"{baseAddress}/{suffix}";
+        Log($"Redirect URI set to: {_redirectUri}");
     }
 
     public static void SetPendingResult(AuthResult result)
@@ -31,18 +49,58 @@ public partial class AuthService
         _pendingResult = result;
     }
 
+#if BROWSER
+    [JSExport]
+#endif
+    public static void OnAuthCompleted(string url)
+    {
+        Log($"OnAuthCompleted called with URL: {url}");
+        // This is called from JS when the popup sends a message
+        if (Uri.TryCreate(url, UriKind.Absolute, out var uri))
+        {
+            Log("Successfully parsed URI, invoking AuthCompleted event");
+            // We need to find the active AuthService instance to notify it.
+            // Since AuthService is a singleton in our app, we can store it in a static field
+            // or use a static event.
+            AuthCompleted?.Invoke(null, uri);
+        }
+        else
+        {
+            Log($"Failed to parse URI: {url}");
+        }
+    }
+
+#if BROWSER
+    [JSExport]
+#endif
+    public static void Log(string message)
+    {
+        Console.WriteLine($"[JS] {message}");
+    }
+
+    private static event EventHandler<Uri>? AuthCompleted;
+
     public Task<AuthSession> BeginAuth()
     {
+        Log("BeginAuth called");
         _tcs = new TaskCompletionSource<AuthResult>();
 
         if (_pendingResult != null)
         {
+            Log("Found pending result, completing task immediately");
             var result = _pendingResult;
             _pendingResult = null;
             _tcs.SetResult(result);
         }
 
-        var authUrl = $"{ApiBaseUrl}/auth/spotify?redirectUrl={Uri.EscapeDataString(RedirectUri)}";
+        if (IsBrowser)
+        {
+            Log("Subscribing to AuthCompleted event for browser");
+            AuthCompleted += OnAuthCompletedInternal;
+        }
+
+        var authUrl = $"{_apiBaseUrl}/auth/spotify?redirectUrl={Uri.EscapeDataString(_redirectUri)}";
+        Log($"Constructed Auth URL: {authUrl}");
 
         return Task.FromResult(new AuthSession
         {
@@ -51,20 +109,35 @@ public partial class AuthService
         });
     }
 
+    private void OnAuthCompletedInternal(object? sender, Uri uri)
+    {
+        Log($"OnAuthCompletedInternal triggered with URI: {uri}");
+        AuthCompleted -= OnAuthCompletedInternal;
+        HandleCallback(uri);
+    }
+
     public void HandleCallback(Uri? uri)
     {
+        Log($"HandleCallback called with URI: {uri}");
         if (uri == null) return;
-        if (!uri.ToString().Contains(RedirectUri)) return;
         
+        // Use a more flexible check for the callback URI since it might contain auth_callback.html or auth/callback
+        if (!uri.ToString().Contains("auth") || (!uri.ToString().Contains("callback") && !uri.ToString().Contains("html"))) 
+        {
+            Log("URI does not appear to be a callback, ignoring");
+            return;
+        }
         
         var result = ParseResult(uri);
         if (result != null)
         {
+            Log("Successfully parsed auth result from callback");
             _currentResult = result;
             _tcs?.TrySetResult(result);
         }
         else
         {
+            Log("Failed to parse auth result from callback");
             _tcs?.TrySetException(new Exception("Auth failed: Missing tokens in callback"));
         }
     }
@@ -99,7 +172,7 @@ public partial class AuthService
     public void OpenUrl(Uri uri)
     {
 #if BROWSER
-        OpenUrlBrowser(uri.ToString());
+        OpenPopupBrowser(uri.ToString());
 #else
         var psi = new System.Diagnostics.ProcessStartInfo
         {
@@ -110,18 +183,18 @@ public partial class AuthService
 #endif
     }
 
-    private void OpenUrlBrowser(string url)
+    private void OpenPopupBrowser(string url)
     {
 #if BROWSER
-        _ = OpenUrlBrowserAsync(url);
+        _ = OpenPopupBrowserAsync(url);
 #endif
     }
 
-    private async Task OpenUrlBrowserAsync(string url)
+    private async Task OpenPopupBrowserAsync(string url)
     {
 #if BROWSER
         await JSHost.ImportAsync("main.js", "../main.js");
-        BrowserInterop.OpenUrl(url);
+        BrowserInterop.OpenPopup(url);
 #endif
     }
 
@@ -162,6 +235,9 @@ public partial class BrowserInterop
 {
     [JSImport("openUrl", "main.js")]
     public static partial void OpenUrl(string url);
+
+    [JSImport("openPopup", "main.js")]
+    public static partial void OpenPopup(string url);
 }
 #endif
 

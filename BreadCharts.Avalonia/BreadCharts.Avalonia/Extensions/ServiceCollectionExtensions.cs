@@ -8,9 +8,10 @@ namespace BreadCharts.Avalonia.Extensions;
 
 public static class ServiceCollectionExtensions
 {
-    public static void AddCommonServices(this IServiceCollection collection)
+    public static void AddCommonServices(this IServiceCollection collection, string? baseAddress = null)
     {
-        collection.AddSingleton<HttpClient>(new HttpClient { BaseAddress = new Uri("http://127.0.0.1:5206") });
+        baseAddress ??= "https://127.0.0.1:7206";
+        collection.AddSingleton<HttpClient>(new HttpClient { BaseAddress = new Uri(baseAddress) });
         collection.AddSingleton<ApiClient>();
         collection.AddSingleton<AuthService>();
         collection.AddSingleton<SpotifyService>();

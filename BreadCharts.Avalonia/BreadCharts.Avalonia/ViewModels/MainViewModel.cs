@@ -1,5 +1,6 @@
 ﻿using System.Threading.Tasks;
 using BreadCharts.Avalonia.Services;
+using BreadCharts.Avalonia.Views;
 using CommunityToolkit.Mvvm.ComponentModel;
 using SpotifyAPI.Web;
 
@@ -31,6 +32,7 @@ public partial class MainViewModel : ViewModelBase
         _apiClient.SetAppToken(result.AppToken);
         var userProfile = await _authService.InitUser(result.SpotifyToken);
         CurrentUser = userProfile;
-        // Navigation and other setup
+        
+        _navService.Navigate(HomeView.ViewName);
     }
 }

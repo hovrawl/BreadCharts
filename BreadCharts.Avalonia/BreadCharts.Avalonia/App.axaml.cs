@@ -32,13 +32,6 @@ public partial class App : Application
         // Creates a ServiceProvider containing services from the provided IServiceCollection
         var services = collection.BuildServiceProvider();
 
-        if (BaseAddress != null)
-        {
-            var authService = services.GetRequiredService<AuthService>();
-            authService.SetRedirectBase(BaseAddress);
-            authService.SetApiBaseUrl(BaseAddress);
-        }
-
         var vm = services.GetRequiredService<MainViewModel>();
 
         // Check for pending auth result (especially for WASM reload)

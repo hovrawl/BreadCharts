@@ -16,12 +16,16 @@ public class ApiClient
     public ApiClient(HttpClient http)
     {
         _http = http;
+        if (http.BaseAddress != null)
+        {
+            BaseAddress = http.BaseAddress.ToString().TrimEnd('/');
+        }
     }
 
     public void SetBaseAddress(string address)
     {
-        BaseAddress = address;
-        var newHttp = new HttpClient { BaseAddress = new Uri(address) };
+        BaseAddress = address.TrimEnd('/');
+        var newHttp = new HttpClient { BaseAddress = new Uri(BaseAddress) };
         if (!string.IsNullOrEmpty(_appToken))
         {
             newHttp.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", _appToken);

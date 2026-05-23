@@ -91,11 +91,6 @@ public class NavigationService
                 _frame.Navigate(typeof(AuthView), data);
                 break;
             }
-            case ServerSelectionView.ViewName:
-            {
-                _frame.Navigate(typeof(ServerSelectionView), data);
-                break;
-            }
             case ChartOptionDetailsView.ViewName:
             {
                 _frame.Navigate(typeof(ChartOptionDetailsView), data);

@@ -24,7 +24,6 @@ builder.Services.ConfigureHttpJsonOptions(options =>
 
 // 1. Configure Services
 builder.Services.AddOpenApi();
-builder.Services.AddHostedService<ServerBroadcastService>();
 
 // DB and Identity
 var connectionString = builder.Configuration.GetConnectionString("DefaultConnection") ?? "Data Source=app.db";
@@ -80,7 +79,7 @@ builder.Services.AddAuthentication(options =>
         else
         {
             // Default callback path for the API, distinct from the Web app
-            options.CallbackPath = "/auth/callback";
+            options.CallbackPath = "/api/auth/callback";
         }
         
         options.SaveTokens = true;
@@ -97,7 +96,7 @@ builder.Services.AddAuthentication(options =>
                     context.Request.Query["error_description"]);
             }
 
-            context.Response.Redirect("/auth/error?message=" + System.Net.WebUtility.UrlEncode(context.Failure?.Message ?? "Unknown error"));
+            context.Response.Redirect("/api/auth/error?message=" + System.Net.WebUtility.UrlEncode(context.Failure?.Message ?? "Unknown error"));
             context.HandleResponse();
             return Task.CompletedTask;
         };
@@ -251,19 +250,23 @@ app.UseAuthentication();
 app.UseAuthorization();
 app.UseCors();
 
+app.UseDefaultFiles();
+app.UseStaticFiles();
+
 // 3. Auth Endpoints
+var auth = app.MapGroup("/api/auth");
 
 // Redirect to Spotify
 // The 'redirectUrl' here is the CLIENT (Avalonia) URL to return to AFTER the API has processed the tokens.
-app.MapGet("/auth/spotify", (string? redirectUrl) =>
+auth.MapGet("/spotify", (string? redirectUrl) =>
 {
-    var props = new AuthenticationProperties { RedirectUri = "/auth/finalize" };
+    var props = new AuthenticationProperties { RedirectUri = "/api/auth/finalize" };
     if (!string.IsNullOrEmpty(redirectUrl)) props.Items["redirectUrl"] = redirectUrl;
     return Results.Challenge(props, ["Spotify"]);
 });
 
 // Finalize OAuth and issue JWT + Spotify tokens
-app.MapGet("/auth/finalize", async (
+auth.MapGet("/finalize", async (
     HttpContext context,
     ApplicationDbContext dbContext,
     IConfiguration config) =>
@@ -408,7 +411,12 @@ voting.MapDelete("/vote/{trackId}", async (IVotingService svc, ClaimsPrincipal u
     return res.ok ? Results.Ok(res.message) : Results.BadRequest(res.message);
 });
 
-app.MapGet("/auth/error", (string? message) => Results.Problem(detail: message, title: "Authentication Error"));
+// 5. Discovery & Health
+app.MapGet("/api/health", () => Results.Ok(new HealthResponse()));
+
+app.MapFallbackToFile("index.html");
+
+app.MapGet("/api/auth/error", (string? message) => Results.Problem(detail: message, title: "Authentication Error"));
 
 app.Run();
 

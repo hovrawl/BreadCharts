@@ -1,6 +1,7 @@
 using System;
 using Avalonia;
 using Avalonia.Controls;
+using Avalonia.Interactivity;
 using Avalonia.Markup.Xaml;
 using BreadCharts.Avalonia.ViewModels;
 
@@ -16,7 +17,11 @@ public partial class AuthView : UserControl
         
         if (Design.IsDesignMode) return;
 
-        // Use a slight delay to ensure DataContext is set if needed, or just check platform
+        Loaded += OnLoaded;
+    }
+
+    private async void OnLoaded(object? sender, RoutedEventArgs e)
+    {
         if (OperatingSystem.IsBrowser())
         {
             var webView = this.FindControl<Control>("AuthWebView");
@@ -24,6 +29,18 @@ public partial class AuthView : UserControl
             
             var browserPanel = this.FindControl<Control>("BrowserAuthPanel");
             if (browserPanel != null) browserPanel.IsVisible = true;
+        }
+        else
+        {
+            if (DataContext is AuthViewModel viewModel)
+            {
+                var session = await viewModel.GetAuthSession();
+                var webView = this.FindControl<NativeWebView>("AuthWebView");
+                if (webView != null)
+                {
+                    webView.Source = session.RedirectUri;
+                }
+            }
         }
     }
 

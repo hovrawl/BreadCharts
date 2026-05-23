@@ -4,6 +4,20 @@ using Microsoft.AspNetCore.Identity;
 
 namespace BreadCharts.WebApi;
 
+public class HealthResponse
+{
+    public string Status { get; set; } = "ok";
+    public string App { get; set; } = "BreadCharts";
+}
+
+public class ServerInfoResponse
+{
+    public string App { get; set; } = "BreadCharts";
+    public string MachineName { get; set; } = Environment.MachineName;
+    public string Version { get; set; } = "1.0.0";
+    public DateTime ServerTimeUtc { get; set; } = DateTime.UtcNow;
+}
+
 public class AuthResponse
 {
     public string AppToken { get; set; } = null!;
@@ -21,7 +35,8 @@ public class UserSummary
 }
 
 [JsonSourceGenerationOptions(WriteIndented = true)]
-[JsonSerializable(typeof(ServerDiscoveryData))]
+[JsonSerializable(typeof(HealthResponse))]
+[JsonSerializable(typeof(ServerInfoResponse))]
 [JsonSerializable(typeof(AuthResponse))]
 [JsonSerializable(typeof(List<SubmittedSong>))]
 [JsonSerializable(typeof(SubmitRequest))]

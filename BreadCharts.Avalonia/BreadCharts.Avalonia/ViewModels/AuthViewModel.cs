@@ -1,4 +1,5 @@
 using System;
+using System.Threading.Tasks;
 using BreadCharts.Avalonia.Services;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
@@ -13,33 +14,24 @@ public partial class AuthViewModel : ViewModelBase
     private readonly AuthService _authService;
     private readonly NavigationService _navService;
 
-    public Uri AuthUri { get; set; }
-
     public bool IsBrowser => _authService.IsBrowser;
 
-    public AuthViewModel(AuthService authService, NavigationService navService, ApiClient apiClient)
+    public AuthViewModel(AuthService authService, NavigationService navService)
     {
         _authService = authService;
         _navService = navService;
-        
-        if (apiClient.BaseAddress != null)
-        {
-            AuthUri = new Uri(new Uri(apiClient.BaseAddress), "/auth/spotify");
-        }
     }
 
     [RelayCommand]
-    public void OpenAuth()
+    public async Task OpenAuth()
     {
-        if (AuthUri == null) return;
-        
-        // Use platform-specific way to open URL
-        // In WASM/Browser, it's better to use top-level redirect if popup blocked, 
-        // but for now we'll assume the browser handled it or we use Native methods.
-        // Actually, we can just use Process.Start or Avalonia's Launcher if available.
-        // But for WASM we'll need JSHost or just let the button be a hyperlink if possible.
-        // For now, let's use the NavigationService or AuthService to open it.
-        _authService.OpenUrl(AuthUri);
+        var session = await GetAuthSession();
+        _authService.OpenUrl(session.RedirectUri);
+    }
+
+    public async Task<AuthSession> GetAuthSession()
+    {
+        return await _authService.BeginAuth();
     }
 
     public void HandleCallback(Uri uri)

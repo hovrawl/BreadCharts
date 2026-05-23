@@ -11,8 +11,8 @@ namespace BreadCharts.Avalonia.Services;
 
 public partial class AuthService
 {
-    private string _apiBaseUrl = "https://127.0.0.1:7206"; 
-    private string _redirectUri = "http://127.0.0.1:5543/auth/callback";
+    private string _apiBaseUrl = "https://localhost:7206"; 
+    private string _redirectUri = "https://localhost:7206/auth/callback";
 
     private static AuthResult? _pendingResult;
     private AuthResult? _currentResult;
@@ -99,7 +99,7 @@ public partial class AuthService
             AuthCompleted += OnAuthCompletedInternal;
         }
 
-        var authUrl = $"{_apiBaseUrl}/auth/spotify?redirectUrl={Uri.EscapeDataString(_redirectUri)}";
+        var authUrl = $"{_apiBaseUrl}/api/auth/spotify?redirectUrl={Uri.EscapeDataString(_redirectUri)}";
         Log($"Constructed Auth URL: {authUrl}");
 
         return Task.FromResult(new AuthSession

@@ -9,12 +9,28 @@ sealed class Program
     // SynchronizationContext-reliant code before AppMain is called: things aren't initialized
     // yet and stuff might break.
     [STAThread]
-    public static void Main(string[] args) => BuildAvaloniaApp()
-        .StartWithClassicDesktopLifetime(args);
+    public static void Main(string[] args)
+    {
+        string? baseAddress = null;
+        if (args.Length > 0 && Uri.TryCreate(args[0], UriKind.Absolute, out var uri))
+        {
+            baseAddress = $"{uri.Scheme}://{uri.Host}{(uri.IsDefaultPort ? "" : $":{uri.Port}")}";
+        }
+
+        BuildAvaloniaApp(baseAddress)
+            .StartWithClassicDesktopLifetime(args);
+    }
 
     // Avalonia configuration, don't remove; also used by visual designer.
-    public static AppBuilder BuildAvaloniaApp()
+    public static AppBuilder BuildAvaloniaApp(string? baseAddress = null)
         => AppBuilder.Configure<App>()
+            .AfterSetup(_ =>
+            {
+                if (App.Current is App app)
+                {
+                    app.BaseAddress = baseAddress;
+                }
+            })
             .UsePlatformDetect()
 #if DEBUG
             .WithDeveloperTools()

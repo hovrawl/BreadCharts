@@ -1,9 +1,11 @@
 using System.Collections.Generic;
+using System.Threading.Tasks;
 using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Markup.Xaml;
 using BreadCharts.Avalonia.ViewModels;
 using BreadCharts.Avalonia.Views;
+using BreadCharts.Avalonia.Views.User;
 using ProfileView = BreadCharts.Avalonia.Views.User.ProfileView;
 
 namespace BreadCharts.Avalonia.Controls;
@@ -23,8 +25,8 @@ public partial class AppNavigation : UserControl
         {
             viewModel.NavService.SetFrame(NavFrame);
             
-            // Start with server selection
-            viewModel.NavService.Navigate(ServerSelectionView.ViewName);
+            // Navigate directly to AuthView
+            viewModel.NavService.Navigate(AuthView.ViewName);
         }
     }
 

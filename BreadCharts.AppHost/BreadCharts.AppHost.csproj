@@ -15,7 +15,8 @@
     </ItemGroup>
 
     <ItemGroup>
-      <ProjectReference Include="..\BreadCharts.Web\BreadCharts.Web.csproj" />
+      <ProjectReference Include="..\BreadCharts.Avalonia\BreadCharts.Avalonia.Desktop\BreadCharts.Avalonia.Desktop.csproj" />
+      <ProjectReference Include="..\BreadCharts.WebApi\BreadCharts.WebApi.csproj" />
     </ItemGroup>
 
 </Project>

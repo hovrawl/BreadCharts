@@ -36,12 +36,12 @@ public partial class AuthViewModel : ViewModelBase
 
     public void HandleCallback(Uri uri)
     {
-        _authService.HandleCallback(uri);
+        _authService.HandleCallbackAsync(uri);
     }
     
     public void SetAccessToken(string accessToken)
     {
-        _accessToken = accessToken;
+        AccessToken = accessToken;
         //_navService.NavigateToDashboard();
     }
 }

@@ -1,3 +1,4 @@
+using System.Collections.Concurrent;
 using System.Security.Claims;
 using System.Text;
 using BreadCharts.Core.Infrastructure;
@@ -131,6 +132,9 @@ if (app.Environment.IsDevelopment())
 {
     app.MapOpenApi();
 }
+
+// Temporary store for exchange codes
+var pendingAuths = new ConcurrentDictionary<string, AuthResponse>();
 
 using (var scope = app.Services.CreateScope())
 {
@@ -361,12 +365,21 @@ auth.MapGet("/finalize", async (
     var redirectUrl = result.Properties?.Items["redirectUrl"];
     if (!string.IsNullOrEmpty(redirectUrl))
     {
+        var exchangeCode = Guid.NewGuid().ToString("n");
+        var authResponse = new AuthResponse
+        {
+            AppToken = jwt,
+            SpotifyAccessToken = accessToken,
+            SpotifyRefreshToken = refreshToken,
+            ExpiresIn = result.Properties?.GetTokenValue("expires_at"),
+            User = new UserSummary { Id = user.Id, DisplayName = user.DisplayName, Email = user.Email }
+        };
+
+        pendingAuths[exchangeCode] = authResponse;
+
         var builder = new UriBuilder(redirectUrl);
         var query = System.Web.HttpUtility.ParseQueryString(builder.Query);
-        query["appToken"] = jwt;
-        query["spotifyAccessToken"] = accessToken;
-        query["spotifyRefreshToken"] = refreshToken;
-        query["expiresIn"] = result.Properties?.GetTokenValue("expires_at");
+        query["code"] = exchangeCode;
         builder.Query = query.ToString();
         return Results.Redirect(builder.ToString());
     }
@@ -417,6 +430,15 @@ app.MapGet("/api/health", () => Results.Ok(new HealthResponse()));
 app.MapFallbackToFile("index.html");
 
 app.MapGet("/api/auth/error", (string? message) => Results.Problem(detail: message, title: "Authentication Error"));
+
+auth.MapGet("/exchange", (string code) =>
+{
+    if (pendingAuths.TryRemove(code, out var response))
+    {
+        return Results.Ok(response);
+    }
+    return Results.Unauthorized();
+});
 
 app.Run();
 

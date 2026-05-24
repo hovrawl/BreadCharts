@@ -1,5 +1,7 @@
 using System;
 using System.Collections.Generic;
+using System.Net.Http;
+using System.Net.Http.Json;
 using System.Threading.Tasks;
 #if BROWSER
 using System.Runtime.InteropServices.JavaScript;
@@ -11,8 +13,9 @@ namespace BreadCharts.Avalonia.Services;
 
 public partial class AuthService
 {
-    private string _apiBaseUrl = "https://localhost:7206"; 
-    private string _redirectUri = "https://localhost:7206/auth/callback";
+    private string _apiBaseUrl = "https://127.0.0.1:7206"; 
+    private string _redirectUri = "https://127.0.0.1:7206/auth/callback";
+    private HttpClient? _httpClient;
 
     private static AuthResult? _pendingResult;
     private AuthResult? _currentResult;
@@ -22,8 +25,9 @@ public partial class AuthService
 
     public AuthResult? CurrentResult => _currentResult;
 
-    public AuthService()
+    public AuthService(HttpClient? httpClient = null)
     {
+        _httpClient = httpClient;
         if (IsBrowser)
         {
             // Detect origin from browser if possible, otherwise rely on SetBaseAddress
@@ -33,7 +37,7 @@ public partial class AuthService
 
     public void SetApiBaseUrl(string apiBaseUrl)
     {
-        _apiBaseUrl = apiBaseUrl;
+        _apiBaseUrl = apiBaseUrl.Replace("localhost", "127.0.0.1");
     }
 
     public void SetRedirectBase(string baseAddress)
@@ -113,10 +117,10 @@ public partial class AuthService
     {
         Log($"OnAuthCompletedInternal triggered with URI: {uri}");
         AuthCompleted -= OnAuthCompletedInternal;
-        HandleCallback(uri);
+        _ = HandleCallbackAsync(uri);
     }
 
-    public void HandleCallback(Uri? uri)
+    public async Task HandleCallbackAsync(Uri? uri)
     {
         Log($"HandleCallback called with URI: {uri}");
         if (uri == null) return;
@@ -129,26 +133,89 @@ public partial class AuthService
         }
         
         var result = ParseResult(uri);
-        if (result != null)
-        {
-            Log("Successfully parsed auth result from callback");
-            _currentResult = result;
-            _tcs?.TrySetResult(result);
-        }
-        else
+        if (result == null)
         {
             Log("Failed to parse auth result from callback");
             _tcs?.TrySetException(new Exception("Auth failed: Missing tokens in callback"));
+            return;
         }
+
+        if (!string.IsNullOrEmpty(result.Code))
+        {
+            Log($"Found exchange code: {result.Code}. Performing token exchange...");
+            try
+            {
+                var client = _httpClient ?? new HttpClient { BaseAddress = new Uri(_apiBaseUrl) };
+                var response = await client.GetAsync($"/api/auth/exchange?code={result.Code}");
+                if (response.IsSuccessStatusCode)
+                {
+                    var authResponse = await response.Content.ReadFromJsonAsync<AuthResponseStub>();
+                    if (authResponse != null)
+                    {
+                        Log("Token exchange successful");
+                        int.TryParse(authResponse.ExpiresIn, out var expiresIn);
+                        result = new AuthResult
+                        {
+                            AppToken = authResponse.AppToken,
+                            SpotifyToken = new AuthorizationCodeTokenResponse
+                            {
+                                AccessToken = authResponse.SpotifyAccessToken ?? "",
+                                RefreshToken = authResponse.SpotifyRefreshToken,
+                                ExpiresIn = expiresIn,
+                                TokenType = "Bearer"
+                            },
+                            UserId = authResponse.User?.Id
+                        };
+                    }
+                }
+                else
+                {
+                    Log($"Token exchange failed with status: {response.StatusCode}");
+                    _tcs?.TrySetException(new Exception($"Auth failed: Token exchange failed with status {response.StatusCode}"));
+                    return;
+                }
+            }
+            catch (Exception ex)
+            {
+                Log($"Error during token exchange: {ex.Message}");
+                _tcs?.TrySetException(ex);
+                return;
+            }
+        }
+
+        Log("Successfully obtained auth result");
+        _currentResult = result;
+        _tcs?.TrySetResult(result);
+    }
+
+    // Temporary stub for deserialization
+    private class AuthResponseStub
+    {
+        public string AppToken { get; set; } = null!;
+        public string? SpotifyAccessToken { get; set; }
+        public string? SpotifyRefreshToken { get; set; }
+        public string? ExpiresIn { get; set; }
+        public UserSummaryStub? User { get; set; }
+    }
+
+    private class UserSummaryStub
+    {
+        public string Id { get; set; } = null!;
     }
 
     public AuthResult? ParseResult(Uri uri)
     {
         var query = System.Web.HttpUtility.ParseQueryString(uri.Query);
+        var code = query["code"];
         var appToken = query["appToken"];
         var spotifyAccessToken = query["spotifyAccessToken"];
         var spotifyRefreshToken = query["spotifyRefreshToken"];
         var expiresInStr = query["expiresIn"];
+
+        if (!string.IsNullOrEmpty(code))
+        {
+            return new AuthResult { Code = code };
+        }
 
         if (!string.IsNullOrEmpty(appToken) && !string.IsNullOrEmpty(spotifyAccessToken))
         {
@@ -243,6 +310,7 @@ public partial class BrowserInterop
 
 public class AuthResult
 {
+    public string? Code { get; set; }
     public string AppToken { get; set; } = "";
     public string? UserId { get; set; }
     public AuthorizationCodeTokenResponse SpotifyToken { get; set; } = null!;

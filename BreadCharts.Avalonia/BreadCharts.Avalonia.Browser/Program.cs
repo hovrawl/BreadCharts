@@ -10,6 +10,8 @@ internal sealed partial class Program
     private static async Task Main(string[] args)
     {
         string? baseAddress = null;
+        string? apiBaseAddress = "https://localhost:7206";
+
         if (args.Length > 0 && Uri.TryCreate(args[0], UriKind.Absolute, out var uri))
         {
             baseAddress = $"{uri.Scheme}://{uri.Host}{(uri.IsDefaultPort ? "" : $":{uri.Port}")}";
@@ -21,7 +23,7 @@ internal sealed partial class Program
             }
         }
 
-        await BuildAvaloniaApp(baseAddress)
+        await BuildAvaloniaApp(baseAddress, apiBaseAddress)
             .WithInterFont()
 #if DEBUG
             .WithDeveloperTools()
@@ -29,13 +31,14 @@ internal sealed partial class Program
             .StartBrowserAppAsync("out");
     }
 
-    public static AppBuilder BuildAvaloniaApp(string? baseAddress = null)
+    public static AppBuilder BuildAvaloniaApp(string? baseAddress = null, string? apiBaseAddress = null)
         => AppBuilder.Configure<App>()
             .AfterSetup(_ =>
             {
                 if (App.Current is App app)
                 {
                     app.BaseAddress = baseAddress;
+                    app.ApiBaseAddress = apiBaseAddress;
                 }
             });
 }

@@ -8,18 +8,26 @@ namespace BreadCharts.Avalonia.Extensions;
 
 public static class ServiceCollectionExtensions
 {
-    public static void AddCommonServices(this IServiceCollection collection, string? baseAddress = null)
+    public static void AddCommonServices(this IServiceCollection collection, string? webBaseAddress = null, string? apiBaseAddress = null)
     {
-        baseAddress ??= "https://localhost:7206";
-        baseAddress = baseAddress.Replace("localhost", "127.0.0.1");
+        // Default API address if none provided
+        apiBaseAddress ??= "https://localhost:7206";
+        apiBaseAddress = apiBaseAddress.Replace("localhost", "127.0.0.1").TrimEnd('/');
+
+        // Default Web address to API address if none provided (usual for desktop)
+        webBaseAddress ??= apiBaseAddress;
+        webBaseAddress = webBaseAddress.Replace("localhost", "127.0.0.1").TrimEnd('/');
         
-        collection.AddSingleton<HttpClient>(new HttpClient { BaseAddress = new Uri(baseAddress) });
+        collection.AddSingleton<HttpClient>(new HttpClient { BaseAddress = new Uri(apiBaseAddress) });
         collection.AddSingleton<ApiClient>();
         
-        var authService = new AuthService();
-        authService.SetApiBaseUrl(baseAddress);
-        authService.SetRedirectBase(baseAddress);
-        collection.AddSingleton<AuthService>(authService);
+        collection.AddSingleton<AuthService>(sp => 
+        {
+            var auth = new AuthService(sp.GetRequiredService<HttpClient>());
+            auth.SetApiBaseUrl(apiBaseAddress);
+            auth.SetRedirectBase(webBaseAddress);
+            return auth;
+        });
         
         collection.AddSingleton<SpotifyService>();
         collection.AddSingleton<NavigationFactory>();

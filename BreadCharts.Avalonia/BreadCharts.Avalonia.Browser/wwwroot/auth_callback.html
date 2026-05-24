@@ -1,19 +1,63 @@
 <!DOCTYPE html>
 <html>
 <head>
-    <title>Authenticating...</title>
+    <meta charset="utf-8" />
+    <title>Authentication Complete</title>
 </head>
 <body>
+    <p>Authentication complete. You can close this window.</p>
+
     <script>
-        console.log("Auth callback page loaded. URL:", window.location.href);
-        // Send the current URL (which contains the tokens) back to the opener window
-        if (window.opener) {
+        const callbackUrl = window.location.href;
+        console.log("Auth callback page loaded. URL:", callbackUrl);
+
+        let notified = false;
+
+        // 1. Try postMessage to opener
+        if (window.opener && !window.opener.closed) {
             console.log("Found opener window, posting message...");
-            window.opener.postMessage(window.location.href, "*");
-            // The opener (main app) will close this window once it receives the message
+            window.opener.postMessage(
+                {
+                    type: "spotify-auth-callback",
+                    url: callbackUrl
+                },
+                window.location.origin
+            );
+            notified = true;
+        }
+
+        // 2. Try BroadcastChannel (modern fallback for tabs)
+        try {
+            const channel = new BroadcastChannel("spotify-auth");
+            channel.postMessage({
+                type: "spotify-auth-callback",
+                url: callbackUrl
+            });
+            channel.close();
+            notified = true;
+            console.log("Sent message via BroadcastChannel");
+        } catch (e) {
+            console.warn("BroadcastChannel not supported or failed:", e);
+        }
+
+        // 3. Try localStorage (fallback for older browsers or cross-tab)
+        try {
+            localStorage.setItem("spotify-auth-callback", callbackUrl);
+            notified = true;
+            console.log("Set result in localStorage");
+        } catch (e) {
+            console.warn("localStorage failed:", e);
+        }
+
+        if (notified) {
+            console.log("Notification sent, closing window...");
+            // Small delay to ensure messages are sent
+            setTimeout(() => {
+                window.close();
+            }, 500);
         } else {
-            console.warn("No opener window found!");
-            document.body.innerHTML = "Authentication complete. You can close this window.";
+            console.warn("Could not notify opener window!");
+            document.body.innerHTML = "Authentication complete. Please return to the main app window.";
         }
     </script>
 </body>

@@ -16,7 +16,10 @@ builder.AddServiceDefaults();
 
 // Add services to the container.
 builder.Services.AddRazorComponents()
-    .AddInteractiveServerComponents();
+    .AddInteractiveServerComponents(options =>
+    {
+        options.DetailedErrors = builder.Environment.IsDevelopment();
+    });
 builder.Services.AddFluentUIComponents();
 builder.Services.AddSingleton<ISpotifyClientService, SpotifyClientService>();
 builder.Services.AddScoped<IChartService, ChartService>();
@@ -57,12 +60,12 @@ authBuilder.AddSpotify(options =>
         SpotifyAPI.Web.Scopes.Streaming,
     };
     foreach (var s in scopes) options.Scope.Add(s);
-    
+
     // Harden correlation cookie to reduce SameSite issues
     options.CorrelationCookie.SameSite = SameSiteMode.Lax;
     options.CorrelationCookie.SecurePolicy = CookieSecurePolicy.Always;
     options.CorrelationCookie.HttpOnly = true;
-    
+
     options.Events = new Microsoft.AspNetCore.Authentication.OAuth.OAuthEvents
     {
         OnCreatingTicket = async context =>

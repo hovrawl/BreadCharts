@@ -1,0 +1,89 @@
+@namespace BreadCharts.Web.Components.Shared
+@using System
+@using Microsoft.AspNetCore.Components
+@using Microsoft.AspNetCore.Identity
+@using Microsoft.AspNetCore.Components.Rendering
+@using BreadCharts.Web.Data
+@using SpotifyAPI.Web
+@inject NavigationManager Navigation
+@inject SignInManager<ApplicationUser> SignInManager
+
+@* Custom error boundary implemented in Razor without using Unsupported OnError parameter *@
+
+@WrappedContent
+
+@code {
+    [Parameter] public RenderFragment? ChildContent { get; set; }
+    [Parameter] public RenderFragment<Exception>? ErrorContent { get; set; }
+
+    private Exception? _handled;
+
+    private RenderFragment WrappedContent => builder =>
+    {
+        try
+        {
+            if (_handled is null)
+            {
+                builder.AddContent(0, ChildContent);
+                return;
+            }
+            // If we already handled an exception, render fallback
+            RenderFallback(builder, _handled);
+        }
+        catch (Exception ex)
+        {
+            _ = HandleExceptionAsync(ex);
+            RenderFallback(builder, ex);
+        }
+    };
+
+    private void RenderFallback(RenderTreeBuilder builder, Exception ex)
+    {
+        if (ErrorContent is not null)
+        {
+            builder.AddContent(100, ErrorContent(ex));
+        }
+        else
+        {
+            builder.OpenElement(101, "div");
+            builder.AddContent(102, "An unexpected error occurred.");
+            builder.CloseElement();
+        }
+    }
+
+    private async Task HandleExceptionAsync(Exception ex)
+    {
+        if (_handled != null) return; // avoid re-entry
+        _handled = ex;
+        try
+        {
+            if (IsAuthExpiredException(ex))
+            {
+                await SignInManager.SignOutAsync();
+                Navigation.NavigateTo("/welcome", replace: true);
+            }
+        }
+        catch { }
+        finally
+        {
+            await InvokeAsync(StateHasChanged);
+        }
+    }
+
+    private static bool IsAuthExpiredException(Exception ex)
+    {
+        if (ex is APIUnauthorizedException) return true;
+        if (ex is APIException apiEx)
+        {
+            try
+            {
+                var status = (int?)apiEx.Response?.StatusCode;
+                if (status == 401) return true;
+            }
+            catch { }
+        }
+        var inner = ex.InnerException;
+        if (inner != null && inner != ex) return IsAuthExpiredException(inner);
+        return false;
+    }
+}

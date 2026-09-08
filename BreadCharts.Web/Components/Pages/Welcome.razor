@@ -1,0 +1,13 @@
+@page "/welcome"
+@using BreadCharts.Web.Components.Account.Shared
+
+<PageTitle>Welcome</PageTitle>
+
+<FluentStack Orientation="Orientation.Vertical" Gap="12" Style="max-width: 720px; margin: 40px auto;">
+    <h1>Welcome to Chart Stopper</h1>
+    <p>
+        This app builds charts and insights from your Spotify account. Sign in with Spotify to get started.
+    </p>
+    <h3>Sign in</h3>
+    <SpotifyExternalLogin />
+</FluentStack>

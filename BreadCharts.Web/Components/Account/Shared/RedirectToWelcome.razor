@@ -1,0 +1,14 @@
+@inject NavigationManager NavigationManager
+
+<p>Redirecting to welcome...</p>
+
+@code {
+    protected override void OnInitialized()
+    {
+        // Send unauthenticated users to our interactive welcome page instead of Identity login
+        // Preserve the current URL as a query parameter if needed later
+        var returnUrl = Uri.EscapeDataString(NavigationManager.Uri);
+        var target = $"/welcome?returnUrl={returnUrl}";
+        NavigationManager.NavigateTo(target, forceLoad: true);
+    }
+}

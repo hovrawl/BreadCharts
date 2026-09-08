@@ -1,0 +1,97 @@
+@page "/callback"
+@using System.Security.Claims
+@using Microsoft.AspNetCore.Authentication
+@using BreadCharts.Core.Services
+@using BreadCharts.Web.Data
+@using Microsoft.AspNetCore.Identity
+
+@inject NavigationManager NavigationManager
+@inject UserManager<ApplicationUser> UserManager
+@inject SignInManager<ApplicationUser> SignInManager
+@inject IHttpContextAccessor HttpContextAccessor
+
+@rendermode InteractiveServer
+
+<p>Finalizing your Spotify sign-in...</p>
+<FluentProgress></FluentProgress>
+
+@code {
+    private bool _completed;
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (!firstRender || _completed) return;
+        _completed = true;
+
+        var http = HttpContextAccessor.HttpContext;
+        if (http is null)
+        {
+            NavigationManager.NavigateTo("/welcome", replace: true);
+            return;
+        }
+
+        // Read the external authentication result
+        var extAuth = await http.AuthenticateAsync(IdentityConstants.ExternalScheme);
+        if (!(extAuth?.Succeeded ?? false) || extAuth.Principal is null)
+        {
+            NavigationManager.NavigateTo("/welcome", replace: true);
+            return;
+        }
+
+        var principal = extAuth.Principal;
+        var spotifyId = principal.FindFirst("urn:spotify:id")?.Value;
+        var email = principal.FindFirst(ClaimTypes.Email)?.Value;
+        var name = principal.FindFirst(ClaimTypes.Name)?.Value;
+        var access = principal.FindFirst("urn:spotify:access_token")?.Value;
+        var refresh = principal.FindFirst("urn:spotify:refresh_token")?.Value;
+
+        // Upsert user by external login or email
+        ApplicationUser? user = null;
+        if (!string.IsNullOrEmpty(spotifyId))
+        {
+            user = await UserManager.FindByLoginAsync("Spotify", spotifyId);
+        }
+        if (user is null && !string.IsNullOrEmpty(email))
+        {
+            user = await UserManager.FindByEmailAsync(email);
+        }
+        if (user is null)
+        {
+            // Fallback identity values if email is missing
+            var username = email ?? ($"spotify-{spotifyId}");
+            user = new ApplicationUser
+            {
+                UserName = username,
+                DisplayName = name ?? string.Empty,
+                Email = email ?? string.Empty,
+                EmailConfirmed = true,
+                ThirdPartyId = spotifyId ?? string.Empty,
+            };
+            var createRes = await UserManager.CreateAsync(user);
+            if (!createRes.Succeeded)
+            {
+                // If creation fails, bail to welcome
+                NavigationManager.NavigateTo("/welcome", replace: true);
+                return;
+            }
+            if (!string.IsNullOrEmpty(spotifyId))
+            {
+                await UserManager.AddLoginAsync(user, new UserLoginInfo("Spotify", spotifyId, "Spotify"));
+            }
+        }
+
+        // Persist only third-party id; do NOT persist access/refresh tokens (session-only requirement)
+        if (!string.IsNullOrEmpty(spotifyId)) user.ThirdPartyId = spotifyId;
+        await UserManager.UpdateAsync(user);
+
+        // Sign in with a session (non-persistent) cookie including access/refresh claims, and clear the external cookie
+        var appClaims = new List<Claim>();
+        if (!string.IsNullOrEmpty(access)) appClaims.Add(new Claim("urn:spotify:access_token", access));
+        if (!string.IsNullOrEmpty(refresh)) appClaims.Add(new Claim("urn:spotify:refresh_token", refresh));
+        await SignInManager.SignInWithClaimsAsync(user, isPersistent: false, appClaims);
+        await http.SignOutAsync(IdentityConstants.ExternalScheme);
+
+        // Client creation is on-demand per user; no in-memory token hydration needed
+        NavigationManager.NavigateTo("/", replace: true);
+    }
+}

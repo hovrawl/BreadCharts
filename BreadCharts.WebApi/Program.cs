@@ -43,6 +43,9 @@ builder.Services.AddScoped<IVotingService, VotingService>();
 builder.Services.AddOptions<VotingOptions>()
     .Bind(builder.Configuration.GetSection("Voting"));
 
+// Store for auth sessions
+var authSessions = new System.Collections.Concurrent.ConcurrentDictionary<string, AuthSession>();
+
 // Auth: Spotify + JWT
 builder.Services.AddAuthentication(options =>
     {
@@ -95,6 +98,15 @@ builder.Services.AddAuthentication(options =>
                 logger.LogError("Spotify error: {Error}, Description: {Description}", 
                     context.Request.Query["error"], 
                     context.Request.Query["error_description"]);
+            }
+
+            // Handle session failure if applicable
+            string? sessionId = null;
+            context.Properties?.Items.TryGetValue("sessionId", out sessionId);
+            if (!string.IsNullOrEmpty(sessionId) && authSessions.TryGetValue(sessionId, out var session))
+            {
+                session.Status = "failed";
+                session.Error = context.Failure?.Message ?? "Authentication failed";
             }
 
             context.Response.Redirect("/api/auth/error?message=" + System.Net.WebUtility.UrlEncode(context.Failure?.Message ?? "Unknown error"));
@@ -260,12 +272,73 @@ app.UseStaticFiles();
 // 3. Auth Endpoints
 var auth = app.MapGroup("/api/auth");
 
+auth.MapPost("/session", (HttpContext context) =>
+{
+    var sessionId = Guid.NewGuid().ToString("n");
+    var baseUrl = $"{context.Request.Scheme}://{context.Request.Host}";
+    var authUrl = $"{baseUrl}/api/auth/spotify?sessionId={sessionId}";
+    
+    var session = new AuthSession
+    {
+        Id = sessionId,
+        Status = "pending",
+        CreatedAt = DateTime.UtcNow
+    };
+    
+    authSessions[sessionId] = session;
+    
+    return Results.Ok(new CreateSessionResponse
+    {
+        SessionId = sessionId,
+        AuthUrl = authUrl
+    });
+});
+
+auth.MapGet("/session/{sessionId}", (string sessionId) =>
+{
+    if (!authSessions.TryGetValue(sessionId, out var session))
+    {
+        return Results.NotFound();
+    }
+    
+    // Check for expiry (e.g., 5 minutes)
+    if (session.Status == "pending" && DateTime.UtcNow - session.CreatedAt > TimeSpan.FromMinutes(5))
+    {
+        session.Status = "expired";
+    }
+    
+    var response = new AuthSessionStatusResponse
+    {
+        Status = session.Status,
+        Error = session.Error
+    };
+    
+    if (session.Response != null)
+    {
+        response.AppToken = session.Response.AppToken;
+        response.SpotifyAccessToken = session.Response.SpotifyAccessToken;
+        response.SpotifyRefreshToken = session.Response.SpotifyRefreshToken;
+        response.ExpiresIn = session.Response.ExpiresIn;
+        response.User = session.Response.User;
+    }
+    
+    return Results.Ok(response);
+});
+
+auth.MapDelete("/session/{sessionId}", (string sessionId) =>
+{
+    authSessions.TryRemove(sessionId, out _);
+    return Results.NoContent();
+});
+
 // Redirect to Spotify
 // The 'redirectUrl' here is the CLIENT (Avalonia) URL to return to AFTER the API has processed the tokens.
-auth.MapGet("/spotify", (string? redirectUrl) =>
+auth.MapGet("/spotify", (string? redirectUrl, string? sessionId) =>
 {
     var props = new AuthenticationProperties { RedirectUri = "/api/auth/finalize" };
     if (!string.IsNullOrEmpty(redirectUrl)) props.Items["redirectUrl"] = redirectUrl;
+    if (!string.IsNullOrEmpty(sessionId)) props.Items["sessionId"] = sessionId;
+    
     return Results.Challenge(props, ["Spotify"]);
 });
 
@@ -362,19 +435,54 @@ auth.MapGet("/finalize", async (
     var jwt = tokenHandler.WriteToken(token);
 
     // Return all tokens to the app
-    var redirectUrl = result.Properties?.Items["redirectUrl"];
+    string? redirectUrl = null;
+    string? sessionId = null;
+    result.Properties?.Items.TryGetValue("redirectUrl", out redirectUrl);
+    result.Properties?.Items.TryGetValue("sessionId", out sessionId);
+
+    var authResponse = new AuthResponse
+    {
+        AppToken = jwt,
+        SpotifyAccessToken = accessToken,
+        SpotifyRefreshToken = refreshToken,
+        ExpiresIn = result.Properties?.GetTokenValue("expires_at"),
+        User = new UserSummary { Id = user.Id, DisplayName = user.DisplayName, Email = user.Email }
+    };
+
+    if (!string.IsNullOrEmpty(sessionId) && authSessions.TryGetValue(sessionId, out var session))
+    {
+        session.Status = "complete";
+        session.Response = authResponse;
+
+        return Results.Content("""
+            <!doctype html>
+            <html>
+            <head>
+                <title>Login Complete</title>
+                <style>
+                    body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; display: flex; align-items: center; justify-content: center; height: 100vh; margin: 0; background-color: #121212; color: white; }
+                    .container { text-align: center; padding: 2rem; border-radius: 8px; background-color: #1e1e1e; box-shadow: 0 4px 6px rgba(0,0,0,0.3); }
+                    h1 { color: #1DB954; }
+                </style>
+            </head>
+            <body>
+                <div class="container">
+                    <h1>Login Complete</h1>
+                    <p>You can now close this window and return to the app.</p>
+                    <script>
+                        setTimeout(() => {
+                            try { window.close(); } catch (e) { console.log("Could not close window automatically"); }
+                        }, 1000);
+                    </script>
+                </div>
+            </body>
+            </html>
+            """, "text/html");
+    }
+
     if (!string.IsNullOrEmpty(redirectUrl))
     {
         var exchangeCode = Guid.NewGuid().ToString("n");
-        var authResponse = new AuthResponse
-        {
-            AppToken = jwt,
-            SpotifyAccessToken = accessToken,
-            SpotifyRefreshToken = refreshToken,
-            ExpiresIn = result.Properties?.GetTokenValue("expires_at"),
-            User = new UserSummary { Id = user.Id, DisplayName = user.DisplayName, Email = user.Email }
-        };
-
         pendingAuths[exchangeCode] = authResponse;
 
         var builder = new UriBuilder(redirectUrl);
@@ -384,14 +492,7 @@ auth.MapGet("/finalize", async (
         return Results.Redirect(builder.ToString());
     }
 
-    return Results.Ok(new AuthResponse
-    {
-        AppToken = jwt,
-        SpotifyAccessToken = accessToken,
-        SpotifyRefreshToken = refreshToken,
-        ExpiresIn = result.Properties?.GetTokenValue("expires_at"),
-        User = new UserSummary { Id = user.Id, DisplayName = user.DisplayName, Email = user.Email }
-    });
+    return Results.Ok(authResponse);
 });
 
 // 4. Voting Endpoints

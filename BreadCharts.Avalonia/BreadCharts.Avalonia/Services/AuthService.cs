@@ -84,7 +84,7 @@ public partial class AuthService
 
     private static event EventHandler<Uri>? AuthCompleted;
 
-    public Task<AuthSession> BeginAuth()
+    public async Task<AuthSession> BeginAuth()
     {
         Log("BeginAuth called");
         _tcs = new TaskCompletionSource<AuthResult>();
@@ -99,18 +99,107 @@ public partial class AuthService
 
         if (IsBrowser)
         {
-            Log("Subscribing to AuthCompleted event for browser");
-            AuthCompleted += OnAuthCompletedInternal;
+            Log("Using polling flow for browser");
+            try
+            {
+                var client = _httpClient ?? new HttpClient { BaseAddress = new Uri(_apiBaseUrl) };
+                var response = await client.PostAsync("/api/auth/session", null);
+                response.EnsureSuccessStatusCode();
+                var sessionData = await response.Content.ReadFromJsonAsync<CreateSessionResponse>();
+                
+                if (sessionData == null) throw new Exception("Failed to create auth session");
+
+                Log($"Created session: {sessionData.SessionId}");
+                
+                // Start polling in background
+                _ = PollForCompletionAsync(sessionData.SessionId);
+
+                return new AuthSession
+                {
+                    RedirectUri = new Uri(sessionData.AuthUrl),
+                    TokenTask = _tcs.Task
+                };
+            }
+            catch (Exception ex)
+            {
+                Log($"Error starting auth session: {ex.Message}");
+                _tcs.TrySetException(ex);
+                throw;
+            }
+        }
+        else
+        {
+            Log("Using redirect flow for desktop");
+            var authUrl = $"{_apiBaseUrl}/api/auth/spotify?redirectUrl={Uri.EscapeDataString(_redirectUri)}";
+            Log($"Constructed Auth URL: {authUrl}");
+
+            return new AuthSession
+            {
+                RedirectUri = new Uri(authUrl),
+                TokenTask = _tcs.Task
+            };
+        }
+    }
+
+    private async Task PollForCompletionAsync(string sessionId)
+    {
+        var client = _httpClient ?? new HttpClient { BaseAddress = new Uri(_apiBaseUrl) };
+        var start = DateTime.UtcNow;
+        var timeout = TimeSpan.FromMinutes(5);
+
+        while (DateTime.UtcNow - start < timeout)
+        {
+            try 
+            {
+                var response = await client.GetAsync($"/api/auth/session/{sessionId}");
+                if (response.IsSuccessStatusCode)
+                {
+                    var status = await response.Content.ReadFromJsonAsync<AuthSessionStatusResponse>();
+                    if (status != null)
+                    {
+                        if (status.Status == "complete")
+                        {
+                            Log("Auth session complete");
+                            var result = new AuthResult
+                            {
+                                AppToken = status.AppToken ?? "",
+                                SpotifyToken = new AuthorizationCodeTokenResponse
+                                {
+                                    AccessToken = status.SpotifyAccessToken ?? "",
+                                    RefreshToken = status.SpotifyRefreshToken,
+                                    ExpiresIn = int.TryParse(status.ExpiresIn, out var exp) ? exp : 0,
+                                    TokenType = "Bearer"
+                                },
+                                UserId = status.User?.Id
+                            };
+                            _currentResult = result;
+                            _tcs?.TrySetResult(result);
+                            return;
+                        }
+                        else if (status.Status == "failed")
+                        {
+                            Log($"Auth session failed: {status.Error}");
+                            _tcs?.TrySetException(new Exception($"Auth failed: {status.Error}"));
+                            return;
+                        }
+                        else if (status.Status == "expired")
+                        {
+                            Log("Auth session expired");
+                            _tcs?.TrySetException(new Exception("Auth session expired"));
+                            return;
+                        }
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                Log($"Error polling session: {ex.Message}");
+            }
+
+            await Task.Delay(1000); // Poll every second
         }
 
-        var authUrl = $"{_apiBaseUrl}/api/auth/spotify?redirectUrl={Uri.EscapeDataString(_redirectUri)}";
-        Log($"Constructed Auth URL: {authUrl}");
-
-        return Task.FromResult(new AuthSession
-        {
-            RedirectUri = new Uri(authUrl),
-            TokenTask = _tcs.Task
-        });
+        _tcs?.TrySetException(new Exception("Auth polling timed out"));
     }
 
     private void OnAuthCompletedInternal(object? sender, Uri uri)
@@ -149,7 +238,7 @@ public partial class AuthService
                 var response = await client.GetAsync($"/api/auth/exchange?code={result.Code}");
                 if (response.IsSuccessStatusCode)
                 {
-                    var authResponse = await response.Content.ReadFromJsonAsync<AuthResponseStub>();
+                    var authResponse = await response.Content.ReadFromJsonAsync<AuthResponse>();
                     if (authResponse != null)
                     {
                         Log("Token exchange successful");
@@ -188,20 +277,6 @@ public partial class AuthService
         _tcs?.TrySetResult(result);
     }
 
-    // Temporary stub for deserialization
-    private class AuthResponseStub
-    {
-        public string AppToken { get; set; } = null!;
-        public string? SpotifyAccessToken { get; set; }
-        public string? SpotifyRefreshToken { get; set; }
-        public string? ExpiresIn { get; set; }
-        public UserSummaryStub? User { get; set; }
-    }
-
-    private class UserSummaryStub
-    {
-        public string Id { get; set; } = null!;
-    }
 
     public AuthResult? ParseResult(Uri uri)
     {

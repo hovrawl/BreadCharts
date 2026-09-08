@@ -25,8 +25,8 @@ public partial class AppNavigation : UserControl
         {
             viewModel.NavService.SetFrame(NavFrame);
             
-            // Navigate directly to AuthView
-            viewModel.NavService.Navigate(AuthView.ViewName);
+            // Start on HomeView so sign-in completion can update the active view model.
+            viewModel.NavService.Navigate(HomeView.ViewName);
         }
     }
 

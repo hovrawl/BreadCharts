@@ -18,26 +18,22 @@ public class ServerInfoResponse
     public DateTime ServerTimeUtc { get; set; } = DateTime.UtcNow;
 }
 
-public class AuthResponse
-{
-    public string AppToken { get; set; } = null!;
-    public string? SpotifyAccessToken { get; set; }
-    public string? SpotifyRefreshToken { get; set; }
-    public string? ExpiresIn { get; set; }
-    public UserSummary User { get; set; } = null!;
-}
-
-public class UserSummary
+public class AuthSession
 {
     public string Id { get; set; } = null!;
-    public string DisplayName { get; set; } = null!;
-    public string? Email { get; set; }
+    public string Status { get; set; } = "pending"; // pending, complete, failed, expired
+    public AuthResponse? Response { get; set; }
+    public string? Error { get; set; }
+    public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
 }
 
 [JsonSourceGenerationOptions(WriteIndented = true)]
 [JsonSerializable(typeof(HealthResponse))]
 [JsonSerializable(typeof(ServerInfoResponse))]
 [JsonSerializable(typeof(AuthResponse))]
+[JsonSerializable(typeof(AuthSession))]
+[JsonSerializable(typeof(CreateSessionResponse))]
+[JsonSerializable(typeof(AuthSessionStatusResponse))]
 [JsonSerializable(typeof(List<SubmittedSong>))]
 [JsonSerializable(typeof(SubmitRequest))]
 [JsonSerializable(typeof(string))]

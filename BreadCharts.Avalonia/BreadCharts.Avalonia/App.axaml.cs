@@ -1,5 +1,3 @@
-using System;
-using System.Threading.Tasks;
 using Avalonia;
 using Avalonia.Controls.ApplicationLifetimes;
 using Avalonia.Data.Core;
@@ -35,9 +33,6 @@ public partial class App : Application
 
         var vm = services.GetRequiredService<MainViewModel>();
 
-        // Check for pending auth result (especially for WASM reload)
-        _ = CheckForPendingAuth(vm);
-        
         if (ApplicationLifetime is IClassicDesktopStyleApplicationLifetime desktop)
         {
             desktop.MainWindow = new MainWindow
@@ -58,22 +53,5 @@ public partial class App : Application
         }
 
         base.OnFrameworkInitializationCompleted();
-    }
-
-    private async Task CheckForPendingAuth(MainViewModel vm)
-    {
-        AuthService.Log("CheckForPendingAuth started");
-        var authSession = await vm.AuthService.BeginAuth();
-        // If BeginAuth immediately returns a completed task (via _pendingResult), this will proceed
-        if (authSession.TokenTask.IsCompleted)
-        {
-            AuthService.Log("Found immediate auth result during startup check");
-            var result = await authSession.TokenTask;
-            await vm.HandleAuthResult(result);
-        }
-        else
-        {
-            AuthService.Log("No immediate auth result found during startup check");
-        }
     }
 }

@@ -28,6 +28,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "BreadCharts.Avalonia.iOS", 
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "BreadCharts.WebApi", "BreadCharts.WebApi\BreadCharts.WebApi.csproj", "{B23CC73E-9789-4E76-9DE0-F7BBCAB576EE}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "BreadCharts.Web", "BreadCharts.Web\BreadCharts.Web.csproj", "{7E0DF973-6FEE-4498-A419-9A843B77D7BA}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -144,6 +146,18 @@ Global
 		{B23CC73E-9789-4E76-9DE0-F7BBCAB576EE}.Release|x64.Build.0 = Release|Any CPU
 		{B23CC73E-9789-4E76-9DE0-F7BBCAB576EE}.Release|x86.ActiveCfg = Release|Any CPU
 		{B23CC73E-9789-4E76-9DE0-F7BBCAB576EE}.Release|x86.Build.0 = Release|Any CPU
+		{7E0DF973-6FEE-4498-A419-9A843B77D7BA}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{7E0DF973-6FEE-4498-A419-9A843B77D7BA}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{7E0DF973-6FEE-4498-A419-9A843B77D7BA}.Debug|x64.ActiveCfg = Debug|Any CPU
+		{7E0DF973-6FEE-4498-A419-9A843B77D7BA}.Debug|x64.Build.0 = Debug|Any CPU
+		{7E0DF973-6FEE-4498-A419-9A843B77D7BA}.Debug|x86.ActiveCfg = Debug|Any CPU
+		{7E0DF973-6FEE-4498-A419-9A843B77D7BA}.Debug|x86.Build.0 = Debug|Any CPU
+		{7E0DF973-6FEE-4498-A419-9A843B77D7BA}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{7E0DF973-6FEE-4498-A419-9A843B77D7BA}.Release|Any CPU.Build.0 = Release|Any CPU
+		{7E0DF973-6FEE-4498-A419-9A843B77D7BA}.Release|x64.ActiveCfg = Release|Any CPU
+		{7E0DF973-6FEE-4498-A419-9A843B77D7BA}.Release|x64.Build.0 = Release|Any CPU
+		{7E0DF973-6FEE-4498-A419-9A843B77D7BA}.Release|x86.ActiveCfg = Release|Any CPU
+		{7E0DF973-6FEE-4498-A419-9A843B77D7BA}.Release|x86.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

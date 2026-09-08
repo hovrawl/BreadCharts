@@ -9,7 +9,6 @@ using BreadCharts.Web.Components;
 using BreadCharts.Web.Components.Account;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.Extensions.Options;
 
 var builder = WebApplication.CreateBuilder(args);
 

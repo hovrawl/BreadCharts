@@ -1,24 +1,6 @@
-﻿@using BreadCharts.Web.Components.Account.Shared
-@using BreadCharts.Web.Components.Shared
-
-<CascadingAuthenticationState>
-    <Router AppAssembly="typeof(Program).Assembly">
-        <Found Context="routeData">
-            <ErrorBoundary>
-                <ChildContent>
-                    <AuthorizeRouteView RouteData="routeData" DefaultLayout="typeof(Layout.MainLayout)">
-                        <NotAuthorized>
-                            <RedirectToWelcome/>
-                        </NotAuthorized>
-                    </AuthorizeRouteView>
-                </ChildContent>
-                <ErrorContent>
-                    <div class="alert">
-                        The page could not be rendered. Check the server logs for the circuit exception.
-                    </div>
-                </ErrorContent>
-            </ErrorBoundary>
-            <FocusOnNavigate RouteData="routeData" Selector="h1"/>
-        </Found>
-    </Router>
-</CascadingAuthenticationState>
+﻿<Router AppAssembly="typeof(Program).Assembly" NotFoundPage="typeof(Pages.NotFound)">
+    <Found Context="routeData">
+        <RouteView RouteData="routeData" DefaultLayout="typeof(Layout.MainLayout)" />
+        <FocusOnNavigate RouteData="routeData" Selector="h1" />
+    </Found>
+</Router>
